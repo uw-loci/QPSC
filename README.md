@@ -6,6 +6,8 @@ QPSC bridges [QuPath](https://qupath.github.io/)'s digital pathology environment
 
 ## System Overview
 
+> **Click any component** to navigate to its repository or documentation.
+
 ```mermaid
 flowchart LR
     subgraph User["User Layer"]
@@ -43,6 +45,11 @@ flowchart LR
     style PM fill:#E67E22,color:#fff
     style MM fill:#D35400,color:#fff
     style HW fill:#C0392B,color:#fff
+
+    click QP "https://github.com/uw-loci/qupath-extension-qpsc" "QPSC Extension Repository"
+    click SWS "https://github.com/JenuC/smart-wsi-scanner" "Smart-WSI-Scanner Repository"
+    click PM "https://pycro-manager.readthedocs.io/" "Pycro-Manager Documentation"
+    click MM "https://micro-manager.org/" "Micro-Manager Website"
 ```
 
 ## Core Workflow
@@ -70,6 +77,8 @@ flowchart LR
 
 ## Architecture
 
+> **Click any component** to navigate to its source code or documentation.
+
 ```mermaid
 flowchart TB
     subgraph QuPathEco["QuPath Ecosystem"]
@@ -81,20 +90,29 @@ flowchart TB
 
         subgraph QPSC["qupath-extension-qpsc"]
             Ctrl["Workflow Controllers"]
-            Modal["Modality System\n(PPM, Brightfield, etc.)"]
+            Modal["Modality System"]
             Svc["Socket Services"]
-            Utils["Coordinate Transforms\n& Tiling Utilities"]
+            Utils["Utilities"]
         end
 
         T2P["tiles-to-pyramid"]
     end
 
     subgraph PythonStack["Smart-WSI-Scanner"]
-        QPSrv["Socket Server"]
-        AcqEng["Acquisition Engine"]
-        AF["Autofocus"]
-        Imaging["Imaging Modules\n(PPM, Debayering)"]
-        HWPy["Hardware Abstraction"]
+        subgraph Server["Server"]
+            QPSrv["qp_server"]
+        end
+        subgraph Acquisition["Acquisition"]
+            AcqEng["Acquisition Engine"]
+            AF["Autofocus"]
+        end
+        subgraph Imaging["Imaging"]
+            PPM["PPM Module"]
+            Debayer["Debayering"]
+        end
+        subgraph HWLayer["Hardware Layer"]
+            HWPy["hardware_pycromanager"]
+        end
     end
 
     subgraph MMEco["Micro-Manager Stack"]
@@ -124,7 +142,8 @@ flowchart TB
 
     QPSrv --> AcqEng
     AcqEng --> AF
-    AcqEng --> Imaging
+    AcqEng --> PPM
+    AcqEng --> Debayer
     AcqEng --> HWPy
 
     HWPy --> PyCro
@@ -139,11 +158,40 @@ flowchart TB
     ZARR --> T2P
     T2P -->|"Import"| QProj
 
+    %% Styling
     style QPSC fill:#4A90D9,color:#fff
-    style QPSrv fill:#306998,color:#fff
+    style Server fill:#306998,color:#fff
+    style Acquisition fill:#4A7DB8,color:#fff
+    style Imaging fill:#4A7DB8,color:#fff
+    style HWLayer fill:#306998,color:#fff
     style PyCro fill:#E67E22,color:#fff
     style MicroM fill:#D35400,color:#fff
     style Cam fill:#C0392B,color:#fff
+
+    %% Clickable links - QuPath Ecosystem
+    click QApp "https://qupath.github.io/" "QuPath Documentation"
+    click QProj "https://qupath.github.io/docs/projects.html" "QuPath Projects"
+    click QAnnot "https://qupath.github.io/docs/annotations.html" "QuPath Annotations"
+
+    %% Clickable links - QPSC Extension
+    click Ctrl "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/controller" "Workflow Controllers"
+    click Modal "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/modality" "Modality System"
+    click Svc "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/service" "Socket Services"
+    click Utils "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/utilities" "Utilities"
+    click T2P "https://github.com/uw-loci/qupath-extension-tiles-to-pyramid" "Tiles to Pyramid Extension"
+
+    %% Clickable links - Python Server
+    click QPSrv "https://github.com/JenuC/smart-wsi-scanner/blob/main/src/smart_wsi_scanner/qp_server.py" "Socket Server"
+    click AcqEng "https://github.com/JenuC/smart-wsi-scanner/tree/main/src/smart_wsi_scanner/acquisition" "Acquisition Engine"
+    click AF "https://github.com/JenuC/smart-wsi-scanner/tree/main/src/smart_wsi_scanner/autofocus" "Autofocus Module"
+    click PPM "https://github.com/JenuC/smart-wsi-scanner/tree/main/src/smart_wsi_scanner/ppm" "PPM Module"
+    click Debayer "https://github.com/JenuC/smart-wsi-scanner/tree/main/src/smart_wsi_scanner/debayering" "Debayering Module"
+    click HWPy "https://github.com/JenuC/smart-wsi-scanner/blob/main/src/smart_wsi_scanner/hardware_pycromanager.py" "Hardware Abstraction"
+
+    %% Clickable links - External
+    click PyCro "https://pycro-manager.readthedocs.io/" "Pycro-Manager Documentation"
+    click MicroM "https://micro-manager.org/" "Micro-Manager Website"
+    click MMCore "https://micro-manager.org/apidoc/mmcorej/latest/" "MMCore API Reference"
 ```
 
 ## Imaging Modalities
