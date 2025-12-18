@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QPSC Ecosystem Diagrams</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: #ecf0f1;
+            color: #2c3e50;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .tab-btn:hover {
+            background: #bdc3c7;
+        }
+        .tab-btn.active {
+            background: #3498db;
+            color: white;
+        }
+        .diagram-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow: auto;
+        }
+        .diagram-title {
+            font-size: 1.2em;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        .diagram-content {
+            display: flex;
+            justify-content: center;
+            min-height: 400px;
+        }
+        .diagram-content svg {
+            max-width: 100%;
+            height: auto;
+        }
+        .hidden { display: none; }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7f8c8d;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 1200px) {
+            .comparison { grid-template-columns: 1fr; }
+        }
+        .info-box {
+            background: #e8f6ff;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>QPSC Ecosystem Architecture</h1>
+    <p class="subtitle">Interactive diagrams comparing Graphviz and Diagrams package outputs</p>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('overview')">Simple Overview</button>
+        <button class="tab-btn" onclick="showTab('full')">Full Ecosystem</button>
+        <button class="tab-btn" onclick="showTab('compare')">Compare Both</button>
+    </div>
+
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="tab-content">
+        <div class="info-box">
+            <h3>Simple Overview</h3>
+            <p>A high-level view of the QPSC system showing the main data flow from user interaction through to microscope hardware.</p>
+        </div>
+        <div class="comparison">
+            <div class="diagram-container">
+                <div class="diagram-title">Graphviz (Pure DOT)</div>
+                <div class="diagram-content" id="overview-graphviz"><div class="loading">Rendering...</div></div>
+            </div>
+            <div class="diagram-container">
+                <div class="diagram-title">Diagrams Package</div>
+                <div class="diagram-content" id="overview-diagrams"><div class="loading">Rendering...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Ecosystem Tab -->
+    <div id="tab-full" class="tab-content hidden">
+        <div class="info-box">
+            <h3>Full Ecosystem</h3>
+            <p>Comprehensive view showing all components, submodules, and their relationships across the entire QPSC stack.</p>
+        </div>
+        <div class="diagram-container">
+            <div class="diagram-title">Complete QPSC Architecture (Graphviz)</div>
+            <div class="diagram-content" id="full-graphviz"><div class="loading">Rendering...</div></div>
+        </div>
+    </div>
+
+    <!-- Compare Tab -->
+    <div id="tab-compare" class="tab-content hidden">
+        <div class="info-box">
+            <h3>Package Comparison</h3>
+            <p><strong>Graphviz (left):</strong> Direct DOT language - more control over layout, cleaner text labels, better for technical documentation.<br>
+            <strong>Diagrams (right):</strong> Icon-based with clusters - more visually appealing, but icons require the package to be installed for rendering.</p>
+        </div>
+        <div class="comparison">
+            <div class="diagram-container">
+                <div class="diagram-title">Graphviz Package</div>
+                <div class="diagram-content" id="compare-graphviz"><div class="loading">Rendering...</div></div>
+            </div>
+            <div class="diagram-container">
+                <div class="diagram-title">Diagrams Package (text-only, no icons)</div>
+                <div class="diagram-content" id="compare-diagrams"><div class="loading">Rendering...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOT sources
+        const diagrams = {
+            overviewGraphviz: `// QPSC High-Level Overview
+digraph QPSC_Overview {
+    rankdir=LR splines=polyline
+    node [fontname=Arial fontsize=12 shape=box style="rounded,filled"]
+    user [label="User\\n(Pathologist/\\nResearcher)" fillcolor="#3498DB" fontcolor=white]
+    qupath [label="QuPath +\\nQPSC Extension\\n(Java)" fillcolor="#4A90D9" fontcolor=white]
+    python [label="Smart-WSI-Scanner\\n(Python Server)" fillcolor="#306998" fontcolor=white]
+    pycromanager [label="Pycro-Manager\\n(Bridge)" fillcolor="#E67E22" fontcolor=white]
+    micromanager [label="Micro-Manager\\n(Device Control)" fillcolor="#D35400" fontcolor=white]
+    microscope [label="Microscope\\nHardware" fillcolor="#C0392B" fontcolor=white]
+    user -> qupath [label="Annotations\\nCommands"]
+    qupath -> python [label="Socket\\nCommands"]
+    python -> pycromanager [label="Python\\nAPI"]
+    pycromanager -> micromanager [label="Java\\nBridge"]
+    micromanager -> microscope [label="Device\\nDrivers"]
+    microscope -> python [label=Images constraint=false style=dashed]
+    python -> qupath [label=Results constraint=false style=dashed]
+}`,
+            overviewDiagrams: `digraph "QPSC System Overview" {
+    graph [fontcolor="#2D3436" fontname=Arial fontsize=14 label="QPSC System Overview" nodesep=1.0 pad=2.0 rankdir=LR ranksep=1.5 splines=polyline]
+    node [fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 shape=box style=rounded]
+    edge [color="#7B8894"]
+    user [label="User\\n(Pathologist)"]
+    subgraph "cluster_Desktop Application" {
+        graph [bgcolor="#E5F5FD" fontname="Sans-Serif" fontsize=12 label="Desktop Application" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+        qupath [label="QuPath +\\nQPSC Extension"]
+    }
+    subgraph "cluster_Python Server" {
+        graph [bgcolor="#E5F5FD" fontname="Sans-Serif" fontsize=12 label="Python Server" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+        server [label="Smart-WSI-Scanner"]
+    }
+    subgraph "cluster_Hardware Bridge" {
+        graph [bgcolor="#E5F5FD" fontname="Sans-Serif" fontsize=12 label="Hardware Bridge" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+        pycromanager [label="Pycro-Manager"]
+        micromanager [label="Micro-Manager"]
+    }
+    subgraph cluster_Microscope {
+        graph [bgcolor="#E5F5FD" fontname="Sans-Serif" fontsize=12 label=Microscope labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+        hardware [label="Microscope\\nHardware"]
+    }
+    user -> qupath [label="Define ROIs"]
+    qupath -> server [label="Socket\\nCommands" color=red style=bold]
+    server -> pycromanager [label="Python API"]
+    pycromanager -> micromanager [label="Java Bridge"]
+    micromanager -> hardware [label="Device\\nControl"]
+    hardware -> server [label=Images color=blue style=dashed]
+    server -> qupath [label=Results color=blue style=dashed]
+}`,
+            fullGraphviz: `// QPSC Ecosystem Architecture
+digraph QPSC_Ecosystem {
+    compound=true rankdir=TB splines=ortho
+    node [fontname=Arial shape=box style="rounded,filled"]
+    edge [fontname=Arial fontsize=10]
+    subgraph cluster_qupath {
+        color=lightblue fillcolor="#E8F4FD" fontname="Arial Bold" fontsize=14 label="QuPath Ecosystem" style=filled
+        subgraph cluster_qupath_core {
+            color="#4A90D9" label="QuPath Core" style=dashed
+            qupath_app [label="QuPath Application\\n(Digital Pathology)" fillcolor="#4A90D9" fontcolor=white]
+            qupath_project [label="QuPath Project System\\n(Image Management)" fillcolor="#4A90D9" fontcolor=white]
+            qupath_annotations [label="Annotation System\\n(ROI Definition)" fillcolor="#4A90D9" fontcolor=white]
+        }
+        subgraph cluster_qpsc_ext {
+            color="#4A90D9" fillcolor="#D4E8FC" label="qupath-extension-qpsc" style=filled
+            controller [label="Controller Layer\\n- QPScopeController\\n- BoundingBoxWorkflow\\n- ExistingImageWorkflow\\n- MicroscopeAlignmentWorkflow" fillcolor="#5DA5E8" fontcolor=white shape=box]
+            modality [label="Modality System\\n- ModalityRegistry\\n- ModalityHandler\\n- PPMModalityHandler" fillcolor="#5DA5E8" fontcolor=white]
+            services [label="Services\\n- AcquisitionCommandBuilder\\n- MicroscopeSocketClient" fillcolor="#5DA5E8" fontcolor=white]
+            ui [label="UI Components\\n- Workflow Dialogs\\n- UIFunctions\\n- PPM UI" fillcolor="#5DA5E8" fontcolor=white]
+            utilities [label="Utilities\\n- MicroscopeConfigManager\\n- TilingUtilities\\n- ImageMetadataManager\\n- QPProjectFunctions" fillcolor="#5DA5E8" fontcolor=white]
+        }
+        tiles_pyramid [label="qupath-extension-\\ntiles-to-pyramid\\n(Image Stitching)" fillcolor="#7AB8F5" fontcolor=white]
+        qupath_dev [label="qupath-qpsc-dev\\n(Custom QuPath Build)" fillcolor="#4A90D9" fontcolor=white]
+    }
+    subgraph cluster_python {
+        color="#306998" fillcolor="#E8F0F8" fontname="Arial Bold" fontsize=14 label="Smart-WSI-Scanner (Python)" style=filled
+        subgraph cluster_server {
+            color="#306998" label="Server Layer" style=dashed
+            qp_server [label="qp_server.py\\n(Socket Server)" fillcolor="#306998" fontcolor=white]
+            qp_client [label="qp_client.py\\n(Client Interface)" fillcolor="#306998" fontcolor=white]
+            qp_utils [label="qp_utils.py\\n(Shared Utilities)" fillcolor="#306998" fontcolor=white]
+        }
+        subgraph cluster_acq {
+            color="#306998" label="Acquisition System" style=dashed
+            acquisition [label="acquisition/\\n- AcquisitionEngine\\n- Profiles\\n- Sequences" fillcolor="#4A7DB8" fontcolor=white]
+            autofocus [label="autofocus/\\n- AutofocusManager\\n- Metrics" fillcolor="#4A7DB8" fontcolor=white]
+        }
+        subgraph cluster_imaging {
+            color="#306998" label="Imaging Modalities" style=dashed
+            ppm_py [label="ppm/\\n(Polarized Light)" fillcolor="#4A7DB8" fontcolor=white]
+            imaging_mod [label="imaging/\\n(Standard Imaging)" fillcolor="#4A7DB8" fontcolor=white]
+            debayering [label="debayering/\\n(Color Processing)" fillcolor="#4A7DB8" fontcolor=white]
+        }
+        hw_pycromanager [label="hardware_pycromanager.py\\n(Hardware Abstraction)" fillcolor="#306998" fontcolor=white]
+    }
+    subgraph cluster_micromanager {
+        color="#E67E22" fillcolor="#FDF2E8" fontname="Arial Bold" fontsize=14 label="Micro-Manager Ecosystem" style=filled
+        pycromanager [label="Pycro-Manager\\n(Python Bridge)" fillcolor="#E67E22" fontcolor=white]
+        micromanager [label="Micro-Manager\\n(Device Control)" fillcolor="#D35400" fontcolor=white]
+        mmcore [label="MMCore\\n(Hardware API)" fillcolor="#D35400" fontcolor=white]
+    }
+    subgraph cluster_hardware {
+        color="#C0392B" fillcolor="#FDEDEC" fontname="Arial Bold" fontsize=14 label="Microscope Hardware" style=filled
+        stage [label="XYZ Stage\\n(ASI, Prior, etc.)" fillcolor="#C0392B" fontcolor=white]
+        camera [label="Camera\\n(Hamamatsu, etc.)" fillcolor="#C0392B" fontcolor=white]
+        polarizer [label="Polarizer/Analyzer\\n(Rotation Stages)" fillcolor="#C0392B" fontcolor=white]
+        illumination [label="Illumination\\n(LED, Laser)" fillcolor="#C0392B" fontcolor=white]
+        objectives [label="Objectives\\n(Turret)" fillcolor="#C0392B" fontcolor=white]
+    }
+    subgraph cluster_config {
+        color="#27AE60" fillcolor="#E8F8F0" fontname="Arial Bold" fontsize=14 label="Configuration System" style=filled
+        config_yml [label="config_ppm.yml\\n(Microscope Config)" fillcolor="#27AE60" fontcolor=white]
+        resources_yml [label="resources_LOCI.yml\\n(Hardware Lookup)" fillcolor="#27AE60" fontcolor=white]
+        acq_profiles [label="Acquisition Profiles\\n(Modality Settings)" fillcolor="#27AE60" fontcolor=white]
+    }
+    subgraph cluster_data {
+        color="#9B59B6" fillcolor="#F4ECF7" fontname="Arial Bold" fontsize=14 label="Data & Output" style=filled
+        raw_tiles [label="Raw Tiles\\n(TIFF)" fillcolor="#9B59B6" fontcolor=white]
+        stitched [label="Stitched Images\\n(OME-ZARR)" fillcolor="#9B59B6" fontcolor=white]
+        pyramids [label="Pyramidal Images\\n(Multi-resolution)" fillcolor="#9B59B6" fontcolor=white]
+    }
+    qupath_app -> qupath_project
+    qupath_app -> qupath_annotations
+    qupath_dev -> qupath_app [label=launches style=dashed]
+    qupath_app -> controller [label="extension\\nAPI"]
+    controller -> modality
+    controller -> services
+    controller -> ui
+    controller -> utilities
+    modality -> services
+    utilities -> qupath_project [style=dashed]
+    qupath_annotations -> controller [label=ROIs]
+    tiles_pyramid -> qupath_app [label=import]
+    stitched -> tiles_pyramid
+    services -> qp_server [label="Socket\\nTCP/IP" color=red penwidth=2 style=bold]
+    qp_server -> qp_utils
+    qp_server -> acquisition
+    qp_client -> qp_server [style=dashed]
+    acquisition -> autofocus
+    acquisition -> ppm_py
+    acquisition -> imaging_mod
+    acquisition -> debayering
+    acquisition -> hw_pycromanager
+    hw_pycromanager -> pycromanager [label="Python\\nAPI"]
+    pycromanager -> micromanager [label="Java\\nBridge"]
+    micromanager -> mmcore
+    mmcore -> stage
+    mmcore -> camera
+    mmcore -> polarizer
+    mmcore -> illumination
+    mmcore -> objectives
+    config_yml -> utilities [label=load style=dashed]
+    config_yml -> qp_server [style=dashed]
+    resources_yml -> config_yml [label=lookup style=dashed]
+    acq_profiles -> acquisition [style=dashed]
+    acq_profiles -> modality [style=dashed]
+    camera -> raw_tiles [label=capture]
+    raw_tiles -> stitched [label=stitch]
+    stitched -> pyramids [label=convert]
+    pyramids -> qupath_project [label=import]
+}`
+        };
+
+        // Render function
+        async function renderDiagram(dotSource, targetId) {
+            const target = document.getElementById(targetId);
+            try {
+                const viz = new Viz();
+                const svg = await viz.renderSVGElement(dotSource);
+                target.innerHTML = '';
+                target.appendChild(svg);
+            } catch (error) {
+                target.innerHTML = '<div style="color: red; padding: 20px;">Error rendering diagram: ' + error.message + '</div>';
+                console.error('Render error:', error);
+            }
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+
+        // Initial render
+        window.addEventListener('DOMContentLoaded', async () => {
+            await renderDiagram(diagrams.overviewGraphviz, 'overview-graphviz');
+            await renderDiagram(diagrams.overviewDiagrams, 'overview-diagrams');
+            await renderDiagram(diagrams.fullGraphviz, 'full-graphviz');
+            await renderDiagram(diagrams.overviewGraphviz, 'compare-graphviz');
+            await renderDiagram(diagrams.overviewDiagrams, 'compare-diagrams');
+        });
+    </script>
+</body>
+</html>
