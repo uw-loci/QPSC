@@ -181,12 +181,12 @@ flowchart TB
     click T2P "https://github.com/uw-loci/qupath-extension-tiles-to-pyramid" "Tiles to Pyramid Extension"
 
     %% Clickable links - Python Server
-    click QPSrv "https://github.com/JenuC/smart-wsi-scanner/blob/main/src/smart_wsi_scanner/qp_server.py" "Socket Server"
-    click AcqEng "https://github.com/JenuC/smart-wsi-scanner/tree/main/src/smart_wsi_scanner/acquisition" "Acquisition Engine"
-    click AF "https://github.com/JenuC/smart-wsi-scanner/tree/main/src/smart_wsi_scanner/autofocus" "Autofocus Module"
-    click PPM "https://github.com/JenuC/smart-wsi-scanner/tree/main/src/smart_wsi_scanner/ppm" "PPM Module"
-    click Debayer "https://github.com/JenuC/smart-wsi-scanner/tree/main/src/smart_wsi_scanner/debayering" "Debayering Module"
-    click HWPy "https://github.com/JenuC/smart-wsi-scanner/blob/main/src/smart_wsi_scanner/hardware_pycromanager.py" "Hardware Abstraction"
+    click QPSrv "https://github.com/JenuC/smart-wsi-scanner/blob/master/src/smart_wsi_scanner/qp_server.py" "Socket Server"
+    click AcqEng "https://github.com/JenuC/smart-wsi-scanner/tree/master/src/smart_wsi_scanner/acquisition" "Acquisition Engine"
+    click AF "https://github.com/JenuC/smart-wsi-scanner/tree/master/src/smart_wsi_scanner/autofocus" "Autofocus Module"
+    click PPM "https://github.com/JenuC/smart-wsi-scanner/tree/master/src/smart_wsi_scanner/ppm" "PPM Module"
+    click Debayer "https://github.com/JenuC/smart-wsi-scanner/tree/master/src/smart_wsi_scanner/debayering" "Debayering Module"
+    click HWPy "https://github.com/JenuC/smart-wsi-scanner/blob/master/src/smart_wsi_scanner/hardware_pycromanager.py" "Hardware Abstraction"
 
     %% Clickable links - External
     click PyCro "https://pycro-manager.readthedocs.io/" "Pycro-Manager Documentation"
