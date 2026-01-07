@@ -18,8 +18,10 @@ flowchart LR
         QP["QuPath +\nQPSC Extension"]
     end
 
-    subgraph Python["Python Server"]
-        SWS["Smart-WSI-Scanner"]
+    subgraph Python["Python Microscope Control"]
+        SRV["Command Server"]
+        CTRL["Hardware Control"]
+        PPM["PPM Library"]
     end
 
     subgraph Bridge["Hardware Bridge"]
@@ -32,22 +34,30 @@ flowchart LR
     end
 
     U -->|"Define ROIs\n& Parameters"| QP
-    QP ==>|"Socket\nCommands"| SWS
-    SWS -->|"Python API"| PM
+    QP ==>|"Socket\nCommands"| SRV
+    SRV --> CTRL
+    SRV --> PPM
+    CTRL -->|"Python API"| PM
     PM -->|"Java Bridge"| MM
     MM -->|"Device\nControl"| HW
 
-    HW -.->|"Images"| SWS
-    SWS -.->|"Stitched\nResults"| QP
+    HW -.->|"Images"| CTRL
+    CTRL -.->|"Processing"| PPM
+    PPM -.->|"Stitched\nResults"| SRV
+    SRV -.->|"Results"| QP
 
     style QP fill:#4A90D9,color:#fff
-    style SWS fill:#306998,color:#fff
+    style SRV fill:#306998,color:#fff
+    style CTRL fill:#4A7DB8,color:#fff
+    style PPM fill:#4A7DB8,color:#fff
     style PM fill:#E67E22,color:#fff
     style MM fill:#D35400,color:#fff
     style HW fill:#C0392B,color:#fff
 
     click QP "https://github.com/uw-loci/qupath-extension-qpsc" "QPSC Extension Repository"
-    click SWS "https://github.com/JenuC/smart-wsi-scanner" "Smart-WSI-Scanner Repository"
+    click SRV "https://github.com/uw-loci/microscope_command_server" "Command Server Repository"
+    click CTRL "https://github.com/uw-loci/microscope_control" "Hardware Control Repository"
+    click PPM "https://github.com/uw-loci/ppm_library" "PPM Library Repository"
     click PM "https://pycro-manager.readthedocs.io/" "Pycro-Manager Documentation"
     click MM "https://micro-manager.org/" "Micro-Manager Website"
 ```
@@ -62,11 +72,21 @@ flowchart LR
 
 ## Component Repositories
 
+### QuPath Extensions
+
 | Repository | Description | Language |
 |------------|-------------|----------|
 | [qupath-extension-qpsc](https://github.com/uw-loci/qupath-extension-qpsc) | Main QPSC QuPath extension - UI, workflows, coordinate transforms | Java |
-| [smart-wsi-scanner](https://github.com/JenuC/smart-wsi-scanner) | Python server for microscope control and image acquisition | Python |
 | [qupath-extension-tiles-to-pyramid](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid) | Stitches acquired tiles into pyramidal OME-ZARR images | Java |
+
+### Python Microscope Control
+
+| Repository | Description | Language |
+|------------|-------------|----------|
+| [microscope_command_server](https://github.com/uw-loci/microscope_command_server) | Socket server for QuPath-to-microscope communication and acquisition workflows | Python |
+| [microscope_control](https://github.com/uw-loci/microscope_control) | Hardware abstraction layer via Pycromanager/Micro-Manager | Python |
+| [ppm_library](https://github.com/uw-loci/ppm_library) | Image processing library for PPM and general microscopy imaging | Python |
+| [microscope_configurations](https://github.com/uw-loci/microscope_configurations) | YAML configuration templates for microscope systems | YAML |
 
 ### Supporting Tools
 
@@ -98,20 +118,20 @@ flowchart TB
         T2P["tiles-to-pyramid"]
     end
 
-    subgraph PythonStack["Smart-WSI-Scanner"]
-        subgraph Server["Server"]
-            QPSrv["qp_server"]
+    subgraph PythonStack["Python Microscope Control (Modular)"]
+        subgraph ServerPkg["microscope_command_server"]
+            QPSrv["Socket Server"]
+            AcqEng["Acquisition Workflows"]
         end
-        subgraph Acquisition["Acquisition"]
-            AcqEng["Acquisition Engine"]
-            AF["Autofocus"]
+        subgraph ControlPkg["microscope_control"]
+            HWPy["Hardware Abstraction"]
+            AF["Autofocus System"]
+            ConfigMgr["Config Manager"]
         end
-        subgraph Imaging["Imaging"]
-            PPM["PPM Module"]
+        subgraph PPMPkg["ppm_library"]
+            PPMProc["PPM Processing"]
             Debayer["Debayering"]
-        end
-        subgraph HWLayer["Hardware Layer"]
-            HWPy["hardware_pycromanager"]
+            Imaging["Background/Tissue"]
         end
     end
 
@@ -141,12 +161,15 @@ flowchart TB
     Svc ==>|"TCP Socket"| QPSrv
 
     QPSrv --> AcqEng
-    AcqEng --> AF
-    AcqEng --> PPM
-    AcqEng --> Debayer
     AcqEng --> HWPy
+    AcqEng --> AF
+    AcqEng --> ConfigMgr
+    AcqEng --> PPMProc
+    AcqEng --> Debayer
+    AcqEng --> Imaging
 
     HWPy --> PyCro
+    HWPy --> Debayer
     PyCro --> MicroM
     MicroM --> MMCore
     MMCore --> Stage
@@ -160,10 +183,9 @@ flowchart TB
 
     %% Styling
     style QPSC fill:#4A90D9,color:#fff
-    style Server fill:#306998,color:#fff
-    style Acquisition fill:#4A7DB8,color:#fff
-    style Imaging fill:#4A7DB8,color:#fff
-    style HWLayer fill:#306998,color:#fff
+    style ServerPkg fill:#306998,color:#fff
+    style ControlPkg fill:#4A7DB8,color:#fff
+    style PPMPkg fill:#4A7DB8,color:#fff
     style PyCro fill:#E67E22,color:#fff
     style MicroM fill:#D35400,color:#fff
     style Cam fill:#C0392B,color:#fff
@@ -180,13 +202,15 @@ flowchart TB
     click Utils "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/utilities" "Utilities"
     click T2P "https://github.com/uw-loci/qupath-extension-tiles-to-pyramid" "Tiles to Pyramid Extension"
 
-    %% Clickable links - Python Server
-    click QPSrv "https://github.com/JenuC/smart-wsi-scanner/blob/master/src/smart_wsi_scanner/qp_server.py" "Socket Server"
-    click AcqEng "https://github.com/JenuC/smart-wsi-scanner/tree/master/src/smart_wsi_scanner/acquisition" "Acquisition Engine"
-    click AF "https://github.com/JenuC/smart-wsi-scanner/tree/master/src/smart_wsi_scanner/autofocus" "Autofocus Module"
-    click PPM "https://github.com/JenuC/smart-wsi-scanner/tree/master/src/smart_wsi_scanner/ppm" "PPM Module"
-    click Debayer "https://github.com/JenuC/smart-wsi-scanner/tree/master/src/smart_wsi_scanner/debayering" "Debayering Module"
-    click HWPy "https://github.com/JenuC/smart-wsi-scanner/blob/master/src/smart_wsi_scanner/hardware_pycromanager.py" "Hardware Abstraction"
+    %% Clickable links - Python Microscope Control
+    click QPSrv "https://github.com/uw-loci/microscope_command_server/blob/main/server/qp_server.py" "Socket Server"
+    click AcqEng "https://github.com/uw-loci/microscope_command_server/tree/main/acquisition" "Acquisition Workflows"
+    click HWPy "https://github.com/uw-loci/microscope_control/tree/main/hardware" "Hardware Abstraction"
+    click AF "https://github.com/uw-loci/microscope_control/tree/main/autofocus" "Autofocus System"
+    click ConfigMgr "https://github.com/uw-loci/microscope_control/blob/main/config/manager.py" "Config Manager"
+    click PPMProc "https://github.com/uw-loci/ppm_library/tree/main/ppm" "PPM Processing"
+    click Debayer "https://github.com/uw-loci/ppm_library/tree/main/debayering" "Debayering"
+    click Imaging "https://github.com/uw-loci/ppm_library/tree/main/imaging" "Background/Tissue Detection"
 
     %% Clickable links - External
     click PyCro "https://pycro-manager.readthedocs.io/" "Pycro-Manager Documentation"
@@ -220,20 +244,39 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
    - Download latest releases from each extension repository
    - Place JAR files in QuPath's `extensions` folder
 
-2. **Set Up Python Server**
+2. **Set Up Python Microscope Control**
    ```bash
-   git clone https://github.com/JenuC/smart-wsi-scanner.git
-   cd smart-wsi-scanner
-   pip install -r requirements.txt
+   # Install all microscope control packages
+   pip install microscope-server
+
+   # This automatically installs dependencies:
+   # - microscope-control (hardware abstraction)
+   # - ppm-library (image processing)
+
+   # Or install from source for development:
+   git clone https://github.com/uw-loci/ppm_library.git
+   git clone https://github.com/uw-loci/microscope_control.git
+   git clone https://github.com/uw-loci/microscope_command_server.git
+
+   pip install -e ppm_library/
+   pip install -e microscope_control/
+   pip install -e microscope_command_server/
    ```
 
 3. **Configure Microscope**
    - Create configuration YAML files (see [Configuration Guide](docs/configuration.md))
    - Set up Micro-Manager device adapters for your hardware
 
-4. **Launch**
+4. **Get Configuration Templates**
+   ```bash
+   git clone https://github.com/uw-loci/microscope_configurations.git
+   cd microscope_configurations
+   # Edit config_template.yml for your microscope
+   ```
+
+5. **Launch**
    - Start Micro-Manager
-   - Start the Python server: `python src/smart_wsi_scanner/qp_server.py`
+   - Start the Python server: `microscope-server`
    - Open QuPath and access QPSC from Extensions menu
 
 ## Configuration
@@ -325,24 +368,75 @@ cd qupath-extension-qpsc
 ### Project Structure
 
 ```
-QPSC_Project/
-├── qupath-extension-qpsc/      # Main QuPath extension
-│   ├── src/main/java/
-│   │   └── qupath/ext/qpsc/
-│   │       ├── controller/     # Workflow orchestration
-│   │       ├── modality/       # Imaging mode plugins
-│   │       ├── service/        # External communication
-│   │       ├── ui/             # JavaFX dialogs
-│   │       └── utilities/      # Coordinate transforms, config
+QPSC Repositories (Modular Architecture)/
+
+QuPath Extensions:
+├── qupath-extension-qpsc/           # Main QPSC extension
+│   ├── src/main/java/qupath/ext/qpsc/
+│   │   ├── controller/              # Workflow orchestration
+│   │   ├── modality/                # Imaging mode plugins
+│   │   ├── service/                 # Socket communication
+│   │   ├── ui/                      # JavaFX dialogs
+│   │   └── utilities/               # Coordinate transforms, config
 │   └── build.gradle
-├── smart-wsi-scanner/          # Python server
-│   └── src/smart_wsi_scanner/
-│       ├── qp_server.py        # Socket server
-│       ├── acquisition/        # Acquisition engine
-│       ├── ppm/                # PPM-specific modules
-│       └── hardware_pycromanager.py
-├── qupath-extension-tiles-to-pyramid/
-└── smartpath_configurations/   # YAML config files
+└── qupath-extension-tiles-to-pyramid/  # Image stitching
+
+Python Microscope Control (pip-installable packages):
+├── microscope_command_server/       # Package: microscope-server
+│   ├── server/
+│   │   ├── qp_server.py            # Socket server
+│   │   └── protocol.py             # Communication protocol
+│   ├── acquisition/
+│   │   ├── workflow.py             # Acquisition orchestration
+│   │   ├── tiles.py                # Tile grid utilities
+│   │   └── pipeline.py             # Processing pipeline
+│   ├── client/
+│   │   └── client.py               # Python client library
+│   └── pyproject.toml
+│
+├── microscope_control/              # Package: microscope-control
+│   ├── hardware/
+│   │   ├── base.py                 # Hardware abstraction
+│   │   └── pycromanager.py         # Micro-Manager integration
+│   ├── autofocus/
+│   │   ├── core.py                 # Autofocus algorithms
+│   │   └── metrics.py              # Focus quality metrics
+│   ├── config/
+│   │   └── manager.py              # YAML config management
+│   └── pyproject.toml
+│
+├── ppm_library/                     # Package: ppm-library
+│   ├── ppm/
+│   │   └── calibration.py          # PPM calibration
+│   ├── imaging/
+│   │   ├── background.py           # Background correction
+│   │   ├── tissue_detection.py     # Empty region detection
+│   │   └── writer.py               # TIFF I/O
+│   ├── debayering/
+│   │   ├── cpu.py                  # CPU debayering
+│   │   └── gpu.py                  # GPU debayering
+│   └── pyproject.toml
+│
+└── microscope_configurations/       # YAML configuration templates
+    ├── config_template.yml
+    ├── autofocus_template.yml
+    ├── imageprocessing_template.yml
+    ├── config_PPM.yml              # Example PPM config
+    ├── config_CAMM.yml             # Example CAMM config
+    └── resources/                  # Hardware resource definitions
+```
+
+**Dependency Chain:**
+```
+microscope_configurations (runtime config files)
+         ↓
+    ┌────┴────┐
+    ↓         ↓
+microscope_control  ppm_library (standalone)
+    ↓         ↓
+    └────┬────┘
+         ↓
+microscope_command_server
 ```
 
 ## Communication Protocol
@@ -374,8 +468,15 @@ sequenceDiagram
 
 We welcome contributions! Please see individual repository guidelines:
 
+**QuPath Extensions:**
 - [QPSC Extension Contributing Guide](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/CONTRIBUTING.md)
-- [Smart-WSI-Scanner Issues](https://github.com/JenuC/smart-wsi-scanner/issues)
+- [Tiles-to-Pyramid Extension](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid)
+
+**Python Microscope Control:**
+- [Microscope Command Server Issues](https://github.com/uw-loci/microscope_command_server/issues)
+- [Microscope Control Issues](https://github.com/uw-loci/microscope_control/issues)
+- [PPM Library Issues](https://github.com/uw-loci/ppm_library/issues)
+- [Configuration Templates](https://github.com/uw-loci/microscope_configurations/issues)
 
 ## Publications & Citations
 
