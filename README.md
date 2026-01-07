@@ -236,48 +236,92 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
 - [QuPath](https://qupath.github.io/) 0.5.0+
 - [Micro-Manager](https://micro-manager.org/) 2.0+
 - Python 3.9+
-- Java 21+
+- Java 21+ (for development only)
 
-### Installation
+### Automated Installation (Windows)
 
-1. **Install QuPath Extensions**
-   - Download latest releases from each extension repository
-   - Place JAR files in QuPath's `extensions` folder
+**Recommended for most users:**
 
-2. **Set Up Python Microscope Control**
-   ```bash
-   # Install all microscope control packages
-   pip install microscope-server
+We provide PowerShell setup scripts for automated installation:
 
-   # This automatically installs dependencies:
-   # - microscope-control (hardware abstraction)
-   # - ppm-library (image processing)
+- **`PPM-QuPath.ps1`** - Production setup (downloads pre-built binaries)
+- **`PPM-QuPath-dev.ps1`** - Development setup (clones all source repositories)
 
-   # Or install from source for development:
-   git clone https://github.com/uw-loci/ppm_library.git
-   git clone https://github.com/uw-loci/microscope_control.git
-   git clone https://github.com/uw-loci/microscope_command_server.git
+**Usage:**
+```powershell
+# Download the setup script
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-QuPath.ps1" -OutFile "PPM-QuPath.ps1"
 
-   pip install -e ppm_library/
-   pip install -e microscope_control/
-   pip install -e microscope_command_server/
-   ```
+# Run the setup script
+.\PPM-QuPath.ps1
+```
 
-3. **Configure Microscope**
-   - Create configuration YAML files (see [Configuration Guide](docs/configuration.md))
-   - Set up Micro-Manager device adapters for your hardware
+See [SETUP_SCRIPTS_README.md](SETUP_SCRIPTS_README.md) for detailed instructions and parameters.
 
-4. **Get Configuration Templates**
-   ```bash
-   git clone https://github.com/uw-loci/microscope_configurations.git
-   cd microscope_configurations
-   # Edit config_template.yml for your microscope
-   ```
+### Manual Installation
 
-5. **Launch**
-   - Start Micro-Manager
-   - Start the Python server: `microscope-server`
-   - Open QuPath and access QPSC from Extensions menu
+#### 1. Install QuPath Extensions
+
+**IMPORTANT:** QuPath extensions must be manually downloaded and installed.
+
+- Download latest JAR files from releases:
+  - [qupath-extension-qpsc releases](https://github.com/uw-loci/qupath-extension-qpsc/releases)
+  - [qupath-extension-tiles-to-pyramid releases](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid/releases)
+- Place JAR files in QuPath's `extensions` folder (typically `C:\Users\YourName\QuPath\extensions`)
+
+#### 2. Set Up Python Microscope Control
+
+```bash
+# Install all microscope control packages
+pip install microscope-server
+
+# This automatically installs dependencies:
+# - microscope-control (hardware abstraction)
+# - ppm-library (image processing)
+```
+
+**For development:**
+```bash
+git clone https://github.com/uw-loci/ppm_library.git
+git clone https://github.com/uw-loci/microscope_control.git
+git clone https://github.com/uw-loci/microscope_command_server.git
+
+pip install -e ppm_library/
+pip install -e microscope_control/
+pip install -e microscope_command_server/
+```
+
+#### 3. Configure Microscope
+
+**IMPORTANT:** Configuration files must be manually created for your specific hardware.
+
+```bash
+# Download configuration templates
+git clone https://github.com/uw-loci/microscope_configurations.git
+cd microscope_configurations
+
+# Copy and edit templates for your microscope
+cp config_template.yml config_my_microscope.yml
+# Edit config_my_microscope.yml with your hardware settings
+```
+
+See [Configuration Guide](docs/configuration.md) for details on configuring your specific hardware.
+
+#### 4. Set Up Micro-Manager
+
+- Install [Micro-Manager 2.0+](https://micro-manager.org/)
+- Configure device adapters for your microscope hardware
+- Test hardware connectivity in Micro-Manager GUI
+
+#### 5. Launch QPSC
+
+```bash
+# Start the microscope server
+microscope-server
+
+# In a separate terminal or window:
+# Start QuPath and access QPSC from Extensions > QPSC menu
+```
 
 ## Configuration
 
