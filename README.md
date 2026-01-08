@@ -11,11 +11,12 @@ QPSC bridges [QuPath](https://qupath.github.io/)'s digital pathology environment
 ```mermaid
 flowchart LR
     subgraph User["User Layer"]
-        U[("Pathologist /\nResearcher")]
+        U[("Pathologist / Researcher")]
     end
 
     subgraph QuPath["QuPath Application"]
-        QP["QuPath +\nQPSC Extension"]
+        QP["QuPath + QPSC Extension"]
+        T2P["Tiles-to-Pyramid Extension"]
     end
 
     subgraph Python["Python Microscope Control"]
@@ -30,23 +31,25 @@ flowchart LR
     end
 
     subgraph Hardware["Microscope"]
-        HW[("Microscope\nHardware")]
+        HW[("Microscope Hardware")]
     end
 
-    U -->|"Define ROIs\n& Parameters"| QP
-    QP ==>|"Socket\nCommands"| SRV
+    U -->|"Define ROIs & Parameters"| QP
+    QP ==>|"Socket Commands"| SRV
     SRV --> CTRL
     SRV --> PPM
     CTRL -->|"Python API"| PM
     PM -->|"Java Bridge"| MM
-    MM -->|"Device\nControl"| HW
+    MM -->|"Device Control"| HW
 
     HW -.->|"Images"| CTRL
     CTRL -.->|"Processing"| PPM
-    PPM -.->|"Stitched\nResults"| SRV
-    SRV -.->|"Results"| QP
+    PPM -.->|"Processed images and analysis"| SRV
+    SRV -.->|"Raw tiles"| T2P
+    T2P -.->|"Stitched OME-ZARR"| QP
 
     style QP fill:#4A90D9,color:#fff
+    style T2P fill:#4A90D9,color:#fff
     style SRV fill:#306998,color:#fff
     style CTRL fill:#4A7DB8,color:#fff
     style PPM fill:#4A7DB8,color:#fff
@@ -55,6 +58,7 @@ flowchart LR
     style HW fill:#C0392B,color:#fff
 
     click QP "https://github.com/uw-loci/qupath-extension-qpsc" "QPSC Extension Repository"
+    click T2P "https://github.com/uw-loci/qupath-extension-tiles-to-pyramid" "Tiles-to-Pyramid Extension Repository"
     click SRV "https://github.com/uw-loci/microscope_command_server" "Command Server Repository"
     click CTRL "https://github.com/uw-loci/microscope_control" "Hardware Control Repository"
     click PPM "https://github.com/uw-loci/ppm_library" "PPM Library Repository"
