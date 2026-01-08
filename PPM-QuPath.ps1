@@ -127,7 +127,7 @@ if (-not $SkipQuPath) {
         Write-Host "    Found QuPath at: $QuPathDir" -ForegroundColor Green
     } else {
         Write-Host "    QuPath not found at: $QuPathDir" -ForegroundColor Yellow
-        Write-Host "    Please download and install QuPath 0.5.0+ from:" -ForegroundColor Yellow
+        Write-Host "    Please download and install QuPath 0.6.0+ from:" -ForegroundColor Yellow
         Write-Host "    https://qupath.github.io/" -ForegroundColor Cyan
         Write-Host ""
         $installQuPath = Read-Host "    Would you like to open the QuPath download page? (y/n)"

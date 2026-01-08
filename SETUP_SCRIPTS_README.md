@@ -132,12 +132,18 @@ Two PowerShell scripts are provided for setting up QPSC on Windows systems:
 Both scripts require:
 
 - **Windows PowerShell 5.1+** or **PowerShell Core 7+**
+- **QuPath 0.6.0+** (required for running QPSC)
 - **Git** (for development script)
 - **Python 3.9+** with pip
-- **Java 21+** (for QuPath extensions)
+- **Java 21+** (for QuPath extensions development)
 - **Micro-Manager 2.0+** (for hardware control)
 
 ### Installing Prerequisites:
+
+**QuPath:**
+- Download from: https://qupath.github.io/
+- ✅ Install QuPath 0.6.0 or later
+- QuPath extensions will be installed to the QuPath extensions folder
 
 **Python:**
 - Download from: https://www.python.org/
@@ -148,6 +154,7 @@ Both scripts require:
 
 **Java:**
 - Download OpenJDK 21: https://adoptium.net/
+- ⚠️ Only needed for developing QuPath extensions (not for using QPSC)
 
 **Micro-Manager:**
 - Download from: https://micro-manager.org/Download_Micro-Manager_Latest_Release

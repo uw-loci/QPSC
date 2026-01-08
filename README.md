@@ -72,11 +72,11 @@ flowchart LR
 
 ## Core Workflow
 
-1. **Load Overview Image** - Import a low-magnification slide scan into QuPath
+1. **Setup Coordinates** - Use known/estimated stage coordinates, or load an image from a slide scanner to enable mapping of stage coordinates to locations on the slide
 2. **Define Regions** - Draw annotations on areas of interest
 3. **Configure Acquisition** - Select imaging modality, objectives, and parameters
-4. **Acquire** - QPSC coordinates with the microscope to capture high-resolution tiles
-5. **Stitch & Import** - Tiles are stitched into pyramidal images and imported back to QuPath
+4. **Acquire** - QPSC sends a workflow to the microscope to capture high-resolution tiles
+5. **Stitch & Import** - Tiles are stitched in a QuPath extension into pyramidal images and imported into a QuPath project along with metadata for sorting the results
 
 ## Component Repositories
 
@@ -105,126 +105,21 @@ flowchart LR
 
 ## Architecture
 
-> **Click any component** to navigate to its source code or documentation.
+QPSC uses a modular architecture with separate Python packages for different concerns:
 
-```mermaid
-flowchart TB
-    subgraph QuPathEco["QuPath Ecosystem"]
-        subgraph Core["QuPath Core"]
-            QApp["QuPath Application"]
-            QProj["Project System"]
-            QAnnot["Annotations"]
-        end
+- **QuPath Extensions** (Java) - User interface, workflows, coordinate transforms
+- **Python Microscope Control** - Socket server, hardware abstraction, image processing
+- **Micro-Manager Stack** - Hardware device control
 
-        subgraph QPSC["qupath-extension-qpsc"]
-            Ctrl["Workflow Controllers"]
-            Modal["Modality System"]
-            Svc["Socket Services"]
-            Utils["Utilities"]
-        end
+For detailed architecture documentation including:
+- Component structure and responsibilities
+- Communication protocols
+- Coordinate system transformations
+- Modality system design
+- Configuration hierarchy
+- Threading and concurrency
 
-        T2P["tiles-to-pyramid"]
-    end
-
-    subgraph PythonStack["Python Microscope Control (Modular)"]
-        subgraph ServerPkg["microscope_command_server"]
-            QPSrv["Socket Server"]
-            AcqEng["Acquisition Workflows"]
-        end
-        subgraph ControlPkg["microscope_control"]
-            HWPy["Hardware Abstraction"]
-            AF["Autofocus System"]
-            ConfigMgr["Config Manager"]
-        end
-        subgraph PPMPkg["ppm_library"]
-            PPMProc["PPM Processing"]
-            Debayer["Debayering"]
-            Imaging["Background/Tissue"]
-        end
-    end
-
-    subgraph MMEco["Micro-Manager Stack"]
-        PyCro["Pycro-Manager"]
-        MicroM["Micro-Manager"]
-        MMCore["MMCore API"]
-    end
-
-    subgraph HW["Hardware"]
-        Stage["XYZ Stage"]
-        Cam["Camera"]
-        Extras["Polarizers, LEDs,\nObjectives, etc."]
-    end
-
-    subgraph Data["Data Flow"]
-        Tiles["Raw Tiles"]
-        ZARR["OME-ZARR"]
-    end
-
-    QApp --> QPSC
-    QAnnot -->|"ROI Bounds"| Ctrl
-    Ctrl --> Modal
-    Ctrl --> Svc
-    Ctrl --> Utils
-
-    Svc ==>|"TCP Socket"| QPSrv
-
-    QPSrv --> AcqEng
-    AcqEng --> HWPy
-    AcqEng --> AF
-    AcqEng --> ConfigMgr
-    AcqEng --> PPMProc
-    AcqEng --> Debayer
-    AcqEng --> Imaging
-
-    HWPy --> PyCro
-    HWPy --> Debayer
-    PyCro --> MicroM
-    MicroM --> MMCore
-    MMCore --> Stage
-    MMCore --> Cam
-    MMCore --> Extras
-
-    Cam --> Tiles
-    Tiles --> ZARR
-    ZARR --> T2P
-    T2P -->|"Import"| QProj
-
-    %% Styling
-    style QPSC fill:#4A90D9,color:#fff
-    style ServerPkg fill:#306998,color:#fff
-    style ControlPkg fill:#4A7DB8,color:#fff
-    style PPMPkg fill:#4A7DB8,color:#fff
-    style PyCro fill:#E67E22,color:#fff
-    style MicroM fill:#D35400,color:#fff
-    style Cam fill:#C0392B,color:#fff
-
-    %% Clickable links - QuPath Ecosystem
-    click QApp "https://qupath.github.io/" "QuPath Documentation"
-    click QProj "https://qupath.github.io/docs/projects.html" "QuPath Projects"
-    click QAnnot "https://qupath.github.io/docs/annotations.html" "QuPath Annotations"
-
-    %% Clickable links - QPSC Extension
-    click Ctrl "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/controller" "Workflow Controllers"
-    click Modal "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/modality" "Modality System"
-    click Svc "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/service" "Socket Services"
-    click Utils "https://github.com/uw-loci/qupath-extension-qpsc/tree/main/src/main/java/qupath/ext/qpsc/utilities" "Utilities"
-    click T2P "https://github.com/uw-loci/qupath-extension-tiles-to-pyramid" "Tiles to Pyramid Extension"
-
-    %% Clickable links - Python Microscope Control
-    click QPSrv "https://github.com/uw-loci/microscope_command_server/blob/main/server/qp_server.py" "Socket Server"
-    click AcqEng "https://github.com/uw-loci/microscope_command_server/tree/main/acquisition" "Acquisition Workflows"
-    click HWPy "https://github.com/uw-loci/microscope_control/tree/main/hardware" "Hardware Abstraction"
-    click AF "https://github.com/uw-loci/microscope_control/tree/main/autofocus" "Autofocus System"
-    click ConfigMgr "https://github.com/uw-loci/microscope_control/blob/main/config/manager.py" "Config Manager"
-    click PPMProc "https://github.com/uw-loci/ppm_library/tree/main/ppm" "PPM Processing"
-    click Debayer "https://github.com/uw-loci/ppm_library/tree/main/debayering" "Debayering"
-    click Imaging "https://github.com/uw-loci/ppm_library/tree/main/imaging" "Background/Tissue Detection"
-
-    %% Clickable links - External
-    click PyCro "https://pycro-manager.readthedocs.io/" "Pycro-Manager Documentation"
-    click MicroM "https://micro-manager.org/" "Micro-Manager Website"
-    click MMCore "https://micro-manager.org/apidoc/mmcorej/latest/" "MMCore API Reference"
-```
+See: **[docs/architecture.md](docs/architecture.md)**
 
 ## Imaging Modalities
 
@@ -241,7 +136,7 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
 
 ### Prerequisites
 
-- [QuPath](https://qupath.github.io/) 0.5.0+
+- [QuPath](https://qupath.github.io/) 0.6.0+
 - [Micro-Manager](https://micro-manager.org/) 2.0+
 - Python 3.9+
 - Java 21+ (for development only)
