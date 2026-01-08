@@ -25,13 +25,13 @@ flowchart LR
         PPM["PPM Library"]
     end
 
+    subgraph Hardware["Microscope"]
+        HW[("Microscope Hardware")]
+    end
+
     subgraph Bridge["Hardware Bridge"]
         PM["Pycro-Manager"]
         MM["Micro-Manager"]
-    end
-
-    subgraph Hardware["Microscope"]
-        HW[("Microscope Hardware")]
     end
 
     U -->|"Define ROIs & Parameters"| QP
@@ -47,6 +47,10 @@ flowchart LR
     PPM -.->|"Processed images and analysis"| SRV
     SRV -.->|"Raw tiles"| T2P
     T2P -.->|"Stitched OME-ZARR"| QP
+
+    %% Add invisible spacing node for padding
+    HW ~~~ SPACE[ ]
+    style SPACE fill:none,stroke:none
 
     style QP fill:#4A90D9,color:#fff
     style T2P fill:#4A90D9,color:#fff
