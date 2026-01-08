@@ -148,10 +148,20 @@ if (-not (Test-Path $configDir)) {
     $templateSource = Join-Path $TargetDir "microscope_configurations"
     if (Test-Path $templateSource) {
         Write-Host "[+] Copying configuration templates..." -ForegroundColor Green
-        Copy-Item -Path "$templateSource\*_template.yml" -Destination $configDir -Force
-        Copy-Item -Path "$templateSource\config_PPM.yml" -Destination $configDir -Force
-        Copy-Item -Path "$templateSource\config_CAMM.yml" -Destination $configDir -Force
-        Copy-Item -Path "$templateSource\resources" -Destination $configDir -Recurse -Force
+
+        # Copy template files from templates/ folder
+        $templatesFolder = Join-Path $templateSource "templates"
+        if (Test-Path $templatesFolder) {
+            Copy-Item -Path "$templatesFolder\*" -Destination $configDir -Force
+        }
+
+        # Copy example configs from root
+        Copy-Item -Path "$templateSource\config_PPM.yml" -Destination $configDir -Force -ErrorAction SilentlyContinue
+        Copy-Item -Path "$templateSource\config_CAMM.yml" -Destination $configDir -Force -ErrorAction SilentlyContinue
+
+        # Copy resources folder
+        Copy-Item -Path "$templateSource\resources" -Destination $configDir -Recurse -Force -ErrorAction SilentlyContinue
+
         Write-Host "    -> Templates copied to: $configDir" -ForegroundColor Cyan
     }
 }

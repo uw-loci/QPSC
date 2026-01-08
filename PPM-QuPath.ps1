@@ -61,15 +61,33 @@ if (-not (Test-Path $configDir)) {
 }
 
 $configRepo = "https://github.com/uw-loci/microscope_configurations"
-$configFiles = @(
+
+# Download templates from templates/ folder
+$templateFiles = @(
     "config_template.yml",
     "autofocus_template.yml",
-    "imageprocessing_template.yml",
+    "imageprocessing_template.yml"
+)
+
+foreach ($file in $templateFiles) {
+    $url = "$configRepo/raw/main/templates/$file"
+    $destination = Join-Path $configDir $file
+
+    Write-Host "    -> Downloading: $file" -ForegroundColor White
+    try {
+        Invoke-WebRequest -Uri $url -OutFile $destination -ErrorAction Stop
+    } catch {
+        Write-Host "    [!] Failed to download $file" -ForegroundColor Yellow
+    }
+}
+
+# Download example configs from root
+$exampleFiles = @(
     "config_PPM.yml",
     "config_CAMM.yml"
 )
 
-foreach ($file in $configFiles) {
+foreach ($file in $exampleFiles) {
     $url = "$configRepo/raw/main/$file"
     $destination = Join-Path $configDir $file
 
