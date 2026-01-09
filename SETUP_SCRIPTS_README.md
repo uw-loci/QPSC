@@ -83,6 +83,26 @@ Clones all repositories and installs in editable mode for code modification:
 
 ## After Installation
 
+### Installation Summary File
+
+**The setup script creates a detailed installation summary:**
+
+```
+%USERPROFILE%\QPSC\INSTALLATION_SUMMARY.txt
+```
+
+**This file contains essential information:**
+- Python environment location (virtual environment path or system Python)
+- How to activate the Python environment
+- Exact paths where packages were installed
+- Complete verification commands to test your installation
+- Troubleshooting tips for common issues
+- All next steps for configuration and launch
+
+**Open this file immediately after installation** to verify everything installed correctly and understand where all components are located.
+
+---
+
 ### Production Mode
 
 1. **Configure your microscope:**
@@ -95,8 +115,8 @@ Clones all repositories and installs in editable mode for code modification:
 
    Or manually:
    ```powershell
-   python -m microscope_command_server.server.qp_server  # Start server
-   QuPath.exe                                            # Start QuPath
+   python -m microscope_server.server.qp_server  # Start server
+   QuPath.exe                                    # Start QuPath
    ```
 
 ### Development Mode
@@ -245,6 +265,7 @@ If you see `ERROR: Could not find a version that satisfies the requirement`, ens
 ## Links
 
 - **QPSC Documentation:** https://github.com/uw-loci/QPSC
+- **Uninstallation Guide:** [UNINSTALL.md](UNINSTALL.md) - Remove QPSC components for clean reinstallation
 - **QuPath:** https://qupath.github.io/
 - **Micro-Manager:** https://micro-manager.org/
 - **Pycro-Manager:** https://pycro-manager.readthedocs.io/

@@ -252,19 +252,56 @@ if (-not $SkipQuPath) {
     Write-Host ""
     Write-Host "[+] Setting up QuPath..." -ForegroundColor Cyan
 
-    # Check if QuPath is already installed
-    $quPathExe = Join-Path $QuPathDir "QuPath.exe"
-    if (Test-Path $quPathExe) {
-        Write-Host "    Found QuPath at: $QuPathDir" -ForegroundColor Green
-    } else {
-        Write-Host "    QuPath not found at: $QuPathDir" -ForegroundColor Yellow
-        Write-Host "    Please download and install QuPath 0.6.0+ from:" -ForegroundColor Yellow
-        Write-Host "    https://qupath.github.io/" -ForegroundColor Cyan
+    # Search for QuPath installation
+    Write-Host "    Searching for QuPath installation..." -ForegroundColor White
+
+    $quPathExe = $null
+    $searchPaths = @(
+        # User-specified path (if provided as parameter)
+        $QuPathDir,
+        # MSI installation default (AppData\Local with version)
+        (Get-ChildItem -Path "$env:LOCALAPPDATA\QuPath-*" -Directory -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending |
+            Select-Object -First 1 -ExpandProperty FullName),
+        # Alternative MSI location
+        "$env:LOCALAPPDATA\QuPath",
+        # Portable installation in user profile
+        "$env:USERPROFILE\QuPath",
+        # Program Files locations
+        "${env:ProgramFiles}\QuPath",
+        "${env:ProgramFiles(x86)}\QuPath"
+    )
+
+    foreach ($path in $searchPaths) {
+        if ($path -and (Test-Path "$path\QuPath.exe" -ErrorAction SilentlyContinue)) {
+            $quPathExe = "$path\QuPath.exe"
+            $QuPathDir = $path
+            Write-Host "    Found QuPath at: $path" -ForegroundColor Green
+            break
+        }
+    }
+
+    if (-not $quPathExe) {
+        Write-Host "    [!] QuPath not found in common locations" -ForegroundColor Yellow
+        Write-Host "" -ForegroundColor Yellow
+        Write-Host "    Searched:" -ForegroundColor Yellow
+        Write-Host "      - $env:LOCALAPPDATA\QuPath-*" -ForegroundColor Gray
+        Write-Host "      - $env:USERPROFILE\QuPath" -ForegroundColor Gray
+        Write-Host "      - ${env:ProgramFiles}\QuPath" -ForegroundColor Gray
         Write-Host ""
-        $installQuPath = Read-Host "    Would you like to open the QuPath download page? (y/n)"
-        if ($installQuPath -eq 'y') {
+        Write-Host "    You can continue setup without QuPath auto-detection." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "    To use QuPath with QPSC later:" -ForegroundColor Yellow
+        Write-Host "      1. Install QuPath 0.6.0+ from: https://qupath.github.io/" -ForegroundColor Cyan
+        Write-Host "      2. Or re-run this script with -QuPathDir parameter pointing to your QuPath installation" -ForegroundColor Cyan
+        Write-Host "         Example: .\PPM-QuPath.ps1 -QuPathDir 'C:\path\to\QuPath-0.6.0'" -ForegroundColor Gray
+        Write-Host ""
+        $openDownloadPage = Read-Host "    Would you like to open the QuPath download page now? (y/n)"
+        if ($openDownloadPage -eq 'y') {
             Start-Process "https://qupath.github.io/"
         }
+        Write-Host ""
+        Write-Host "    Continuing setup..." -ForegroundColor Cyan
     }
 
     if ($Development) {
@@ -302,15 +339,16 @@ if (-not $SkipQuPath) {
         Write-Host "    .\gradlew build" -ForegroundColor Yellow
 
     } else {
-        # In production mode, download QuPath extensions
-        Write-Host ""
-        Write-Host "[+] Downloading QuPath extensions..." -ForegroundColor Cyan
+        # In production mode, download QuPath extensions (only if QuPath was found)
+        if ($quPathExe) {
+            Write-Host ""
+            Write-Host "[+] Downloading QuPath extensions..." -ForegroundColor Cyan
 
-        $extensionsDir = Join-Path $QuPathDir "extensions"
-        if (-not (Test-Path $extensionsDir)) {
-            Write-Host "    Creating extensions directory: $extensionsDir" -ForegroundColor Yellow
-            New-Item -ItemType Directory -Path $extensionsDir -Force | Out-Null
-        }
+            $extensionsDir = Join-Path $QuPathDir "extensions"
+            if (-not (Test-Path $extensionsDir)) {
+                Write-Host "    Creating extensions directory: $extensionsDir" -ForegroundColor Yellow
+                New-Item -ItemType Directory -Path $extensionsDir -Force | Out-Null
+            }
 
         # Extension repositories and their latest release URLs
         $extensions = @{
@@ -352,6 +390,11 @@ if (-not $SkipQuPath) {
                 Write-Host "       Please download manually from: https://github.com/$extRepo/releases" -ForegroundColor Yellow
             }
         }
+        } else {
+            Write-Host ""
+            Write-Host "    [!] Skipping QuPath extensions download - QuPath not found" -ForegroundColor Yellow
+            Write-Host "    Extensions will need to be installed manually after QuPath is installed" -ForegroundColor Yellow
+        }
     }
 }
 
@@ -386,9 +429,9 @@ Write-Host "[+] Creating launcher script..." -ForegroundColor Cyan
 
 if ($Development) {
     $activateCmd = Join-Path (Join-Path $InstallDir "venv_qpsc") "Scripts\Activate.ps1"
-    $pythonCmd = "& '$activateCmd'; python -m microscope_command_server.server.qp_server"
+    $pythonCmd = "& '$activateCmd'; python -m microscope_server.server.qp_server"
 } else {
-    $pythonCmd = "python -m microscope_command_server.server.qp_server"
+    $pythonCmd = "python -m microscope_server.server.qp_server"
 }
 
 $launcherScript = @"
@@ -429,6 +472,285 @@ $launcherPath = Join-Path $InstallDir "Launch-QPSC.ps1"
 $launcherScript | Out-File -FilePath $launcherPath -Encoding UTF8
 Write-Host "    Created: $launcherPath" -ForegroundColor Green
 
+# Generate Installation Summary File
+Write-Host ""
+Write-Host "[+] Creating installation summary..." -ForegroundColor Cyan
+
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$summaryPath = Join-Path $InstallDir "INSTALLATION_SUMMARY.txt"
+
+$summaryContent = @"
+========================================
+QPSC Installation Summary
+========================================
+Date: $timestamp
+Setup Mode: $setupMode
+
+========================================
+INSTALLATION LOCATIONS
+========================================
+
+Installation Directory:
+  $InstallDir
+
+"@
+
+if ($Development) {
+    $venvPath = Join-Path $InstallDir "venv_qpsc"
+    $summaryContent += @"
+Python Virtual Environment:
+  $venvPath
+
+  To activate the virtual environment:
+    Windows PowerShell:
+      $venvPath\Scripts\Activate.ps1
+
+    Command Prompt:
+      $venvPath\Scripts\activate.bat
+
+    Linux/macOS:
+      source $venvPath/bin/activate
+
+Python Packages (Editable Install):
+  ppm-library:               $InstallDir\ppm_library
+  microscope-control:        $InstallDir\microscope_control
+  microscope-server:         $InstallDir\microscope_command_server
+
+Configuration Repository:
+  $InstallDir\microscope_configurations
+
+"@
+} else {
+    # Get Python location
+    $pythonLocation = (Get-Command python -ErrorAction SilentlyContinue).Source
+    if (-not $pythonLocation) {
+        $pythonLocation = "Python executable not found in PATH"
+    }
+
+    $summaryContent += @"
+Python Installation:
+  $pythonLocation
+
+  QPSC packages installed to Python's site-packages directory.
+  This is typically:
+    %APPDATA%\Python\Python3XX\site-packages  (user install)
+    OR
+    C:\ProgramData\Python3XX\Lib\site-packages  (system install)
+
+  To find exact location:
+    python -c "import microscope_server; print(microscope_server.__file__)"
+
+"@
+}
+
+$configDir = Join-Path $InstallDir "configurations"
+$summaryContent += @"
+Configuration Templates:
+  $configDir
+
+Launcher Script:
+  $launcherPath
+
+"@
+
+if ($quPathExe) {
+    $extensionsDir = Join-Path $QuPathDir "extensions"
+    $summaryContent += @"
+QuPath Installation:
+  $quPathExe
+
+QuPath Extensions Directory:
+  $extensionsDir
+
+"@
+} else {
+    $summaryContent += @"
+QuPath Installation:
+  Not found during setup
+  Extensions will need to be installed manually
+
+"@
+}
+
+$summaryContent += @"
+
+========================================
+VERIFICATION COMMANDS
+========================================
+
+1. Verify Python Packages:
+"@
+
+if ($Development) {
+    $summaryContent += @"
+   # Activate virtual environment first:
+   $venvPath\Scripts\Activate.ps1
+
+"@
+}
+
+$summaryContent += @"
+   # Then check installed packages:
+   pip show microscope-server
+   pip show microscope-control
+   pip show ppm-library
+   pip show pycromanager
+
+2. List All QPSC Packages:
+   pip list | Select-String "microscope|ppm"
+
+3. Test Python Import:
+"@
+
+if ($Development) {
+    $summaryContent += @"
+   # With venv activated:
+   python -c "import microscope_server; print('OK:', microscope_server.__file__)"
+   python -c "import microscope_control; print('OK:', microscope_control.__file__)"
+   python -c "import ppm; print('OK:', ppm.__file__)"
+"@
+} else {
+    $summaryContent += @"
+   python -c "import microscope_server; print('OK:', microscope_server.__file__)"
+   python -c "import microscope_control; print('OK:', microscope_control.__file__)"
+   python -c "import ppm; print('OK:', ppm.__file__)"
+"@
+}
+
+$summaryContent += @"
+
+
+4. Check QuPath Extensions:
+   - Launch QuPath
+   - Go to: Extensions menu
+   - Look for: "QPSC" menu item
+
+========================================
+INSTALLED COMPONENTS
+========================================
+"@
+
+if ($Development) {
+    $summaryContent += @"
+[+] Python Virtual Environment (venv_qpsc)
+[+] Python Packages (editable mode):
+    - ppm-library
+    - microscope-control
+    - microscope-server
+    - pycromanager
+[+] Source Code Repositories:
+    - ppm_library/
+    - microscope_control/
+    - microscope_command_server/
+    - microscope_configurations/
+"@
+} else {
+    $summaryContent += @"
+[+] Python Packages (from GitHub releases):
+    - ppm-library
+    - microscope-control
+    - microscope-server
+    - pycromanager
+"@
+}
+
+$summaryContent += @"
+[+] Configuration Templates
+[+] Launch Script (Launch-QPSC.ps1)
+"@
+
+if (-not $SkipQuPath) {
+    if ($quPathExe) {
+        $summaryContent += "[+] QuPath Extensions (downloaded to extensions folder)`n"
+    } else {
+        $summaryContent += "[!] QuPath Extensions (SKIPPED - QuPath not found)`n"
+    }
+}
+
+$summaryContent += @"
+
+========================================
+NEXT STEPS
+========================================
+"@
+
+if ($Development) {
+    $summaryContent += @"
+
+1. Activate Python Environment:
+   $venvPath\Scripts\Activate.ps1
+
+2. Build QuPath Extensions:
+   cd $InstallDir\qupath-extension-qpsc
+   .\gradlew build
+
+3. Copy Built JARs to QuPath Extensions Folder
+
+4. Configure Your Microscope:
+   Edit: $configDir\config_template.yml
+"@
+} else {
+    $summaryContent += @"
+
+1. Configure Your Microscope:
+   Edit: $configDir\config_template.yml
+"@
+}
+
+$summaryContent += @"
+
+2. Set Up Micro-Manager Device Adapters
+
+3. Launch QPSC:
+   $launcherPath --qupath
+
+========================================
+TROUBLESHOOTING
+========================================
+
+If packages are not found:
+"@
+
+if ($Development) {
+    $summaryContent += @"
+  - Make sure virtual environment is activated
+  - Check: pip list (should show microscope-server, microscope-control, ppm-library)
+"@
+} else {
+    $summaryContent += @"
+  - Check: pip list (should show microscope-server, microscope-control, ppm-library)
+  - Reinstall packages: pip install --force-reinstall microscope-server
+"@
+}
+
+$summaryContent += @"
+
+If server won't start:
+  - Check if port 5000 is already in use: netstat -ano | findstr :5000
+  - Verify Micro-Manager is installed
+  - Check Python can import packages (see verification commands above)
+
+QuPath extensions not appearing:
+  - Verify JAR files are in QuPath extensions folder
+  - Restart QuPath completely
+  - Check: Extensions menu in QuPath
+
+========================================
+DOCUMENTATION
+========================================
+
+Full Documentation: https://github.com/uw-loci/QPSC
+Uninstall Guide:    $InstallDir\UNINSTALL.md (if downloaded)
+                    https://github.com/uw-loci/QPSC/blob/main/UNINSTALL.md
+
+Report Issues:      https://github.com/uw-loci/QPSC/issues
+
+========================================
+"@
+
+$summaryContent | Out-File -FilePath $summaryPath -Encoding UTF8
+Write-Host "    Created: $summaryPath" -ForegroundColor Green
+
 # Summary
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
@@ -437,6 +759,23 @@ Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Installation Directory:" -ForegroundColor Cyan
 Write-Host "  $InstallDir" -ForegroundColor White
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Yellow
+Write-Host "  DETAILED INSTALLATION SUMMARY" -ForegroundColor Yellow
+Write-Host "========================================" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "A complete installation summary has been saved to:" -ForegroundColor White
+Write-Host "  $summaryPath" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "This file contains:" -ForegroundColor White
+Write-Host "  - Python environment location and activation commands" -ForegroundColor Gray
+Write-Host "  - Package installation paths" -ForegroundColor Gray
+Write-Host "  - Verification commands to test your installation" -ForegroundColor Gray
+Write-Host "  - Troubleshooting tips" -ForegroundColor Gray
+Write-Host ""
+Write-Host "Open it to verify your installation!" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Setup Mode:" -ForegroundColor Cyan
 Write-Host "  $setupMode" -ForegroundColor White
@@ -458,6 +797,31 @@ if (-not $SkipQuPath) {
     } else {
         Write-Host "  [+] QuPath extensions (JAR files)" -ForegroundColor White
     }
+}
+
+Write-Host ""
+Write-Host "Python Environment:" -ForegroundColor Cyan
+
+if ($Development) {
+    $venvPath = Join-Path $InstallDir "venv_qpsc"
+    Write-Host "  Location: $venvPath" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  To activate:" -ForegroundColor White
+    Write-Host "    $venvPath\Scripts\Activate.ps1" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  To verify packages (after activating):" -ForegroundColor White
+    Write-Host "    pip list | Select-String ""microscope|ppm""" -ForegroundColor Yellow
+} else {
+    $pythonLocation = (Get-Command python -ErrorAction SilentlyContinue).Source
+    Write-Host "  Python: $pythonLocation" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  Packages installed to: Python site-packages" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  To verify packages:" -ForegroundColor White
+    Write-Host "    pip list | Select-String ""microscope|ppm""" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  To find package locations:" -ForegroundColor White
+    Write-Host "    python -c ""import microscope_server; print(microscope_server.__file__)""" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -489,8 +853,8 @@ Write-Host "     $launcherPath --qupath" -ForegroundColor Yellow
 if (-not $Development) {
     Write-Host ""
     Write-Host "  Or manually:" -ForegroundColor White
-    Write-Host "     python -m microscope_command_server.server.qp_server  # Start server" -ForegroundColor Yellow
-    Write-Host "     QuPath.exe                                            # Start QuPath" -ForegroundColor Yellow
+    Write-Host "     python -m microscope_server.server.qp_server  # Start server" -ForegroundColor Yellow
+    Write-Host "     QuPath.exe                                    # Start QuPath" -ForegroundColor Yellow
 }
 
 Write-Host ""

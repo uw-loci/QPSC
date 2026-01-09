@@ -181,13 +181,20 @@ Install these foundational components **in this order** before QPSC installation
 
 For users who want to use QPSC without modifying code:
 
+**1. Open PowerShell** (Run as Administrator recommended)
+
+**2. Navigate to your home directory** (avoid System32!):
 ```powershell
-# 1. Open PowerShell (Run as Administrator recommended)
+cd $env:USERPROFILE
+```
 
-# 2. Download the setup script
+**3. Download the setup script:**
+```powershell
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-QuPath.ps1" -OutFile "PPM-QuPath.ps1"
+```
 
-# 3. Run the setup script
+**4. Run the setup script:**
+```powershell
 .\PPM-QuPath.ps1
 ```
 
@@ -199,19 +206,69 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-
 - Downloads configuration templates
 - Creates a launcher script for easy server startup
 
-**Default installation location:** `C:\QPSC\`
+**Default installation location:** `C:\Users\YourUsername\QPSC\`
 
-**Custom location:**
+**Custom installation location:**
 ```powershell
 .\PPM-QuPath.ps1 -InstallDir "D:\MyProjects\QPSC"
 ```
+
+**Custom QuPath location** (if not auto-detected):
+```powershell
+.\PPM-QuPath.ps1 -QuPathDir "C:\path\to\QuPath-0.6.0"
+```
+
+> **Note:** The script automatically searches for QuPath in:
+> - `%LOCALAPPDATA%\QuPath-*` (MSI installation default)
+> - `%USERPROFILE%\QuPath` (portable installation)
+> - `%ProgramFiles%\QuPath`
+>
+> If QuPath is in a different location, use the `-QuPathDir` parameter.
+
+#### After Installation: Verify Your Setup
+
+**The setup script creates a detailed installation summary file:**
+
+```
+%USERPROFILE%\QPSC\INSTALLATION_SUMMARY.txt
+```
+
+**This file contains:**
+- Python environment location and activation commands
+- Exact paths where packages were installed
+- Verification commands to test your installation
+- Troubleshooting tips for common issues
+
+**Quick verification commands:**
+
+For production installation (system-wide Python):
+```powershell
+pip list | Select-String "microscope|ppm"
+python -c "import microscope_server; print('OK:', microscope_server.__file__)"
+```
+
+For development installation (virtual environment):
+```powershell
+C:\Users\YourUsername\QPSC\venv_qpsc\Scripts\Activate.ps1
+pip list | Select-String "microscope|ppm"
+python -c "import microscope_server; print('OK:', microscope_server.__file__)"
+```
+
+Open the `INSTALLATION_SUMMARY.txt` file to see all available verification commands and troubleshooting steps!
+
+---
 
 #### Development Mode
 
 For developers who want to modify QPSC code:
 
+**Navigate to your home directory** (if you followed Quick Start above, you're already there):
 ```powershell
-# Download and run in development mode
+cd $env:USERPROFILE
+```
+
+**Download and run in development mode:**
+```powershell
 .\PPM-QuPath.ps1 -Development
 ```
 
@@ -236,11 +293,21 @@ For developers who want to modify QPSC code:
 
 #### Prerequisites Check
 
-Before starting, verify:
+Before starting, verify you have the required tools installed:
+
+Check Python version (should show 3.10 or higher):
 ```bash
-python --version   # Should show 3.10 or higher
-pip --version      # Python package installer
-git --version      # For cloning repositories (development mode)
+python --version
+```
+
+Check pip is available:
+```bash
+pip --version
+```
+
+Check git is available (for development mode):
+```bash
+git --version
 ```
 
 #### Step 1: Create Python Virtual Environment (Recommended)
@@ -248,26 +315,46 @@ git --version      # For cloning repositories (development mode)
 Using a virtual environment isolates QPSC dependencies from system Python:
 
 **Windows:**
+
+Navigate to an appropriate directory (e.g., your home directory):
 ```powershell
-# Create virtual environment
+cd $env:USERPROFILE
+```
+
+Create virtual environment:
+```powershell
 python -m venv qpsc-env
+```
 
-# Activate virtual environment
+Activate virtual environment:
+```powershell
 .\qpsc-env\Scripts\activate
+```
 
-# Verify activation (should show path to venv)
+Verify activation (should show path to venv):
+```powershell
 where python
 ```
 
 **macOS/Linux:**
+
+Navigate to an appropriate directory (e.g., your home directory):
 ```bash
-# Create virtual environment
+cd ~
+```
+
+Create virtual environment:
+```bash
 python3 -m venv qpsc-env
+```
 
-# Activate virtual environment
+Activate virtual environment:
+```bash
 source qpsc-env/bin/activate
+```
 
-# Verify activation
+Verify activation:
+```bash
 which python
 ```
 
@@ -281,40 +368,50 @@ These packages have dependencies on each other and must be installed in this exa
 
 **Option A: Install from GitHub (Users)**
 
-Installs the latest released versions from GitHub:
+Installs the latest released versions from GitHub.
 
+**1. Install PPM Library** (no QPSC dependencies):
 ```bash
-# 1. PPM Library (no QPSC dependencies)
 pip install git+https://github.com/uw-loci/ppm_library.git
+```
 
-# 2. Microscope Control (depends on ppm_library)
+**2. Install Microscope Control** (depends on ppm_library):
+```bash
 pip install git+https://github.com/uw-loci/microscope_control.git
+```
 
-# 3. Microscope Command Server (depends on both above)
+**3. Install Microscope Command Server** (depends on both above):
+```bash
 pip install git+https://github.com/uw-loci/microscope_command_server.git
 ```
 
 **Option B: Clone and Install Editable (Developers)**
 
-For development and code modification:
+For development and code modification.
 
+Navigate to a parent directory for repositories:
 ```bash
-# Choose a parent directory for repositories
 cd /path/to/your/projects/
+```
 
-# Clone and install ppm_library
+**Clone and install ppm_library:**
+```bash
 git clone https://github.com/uw-loci/ppm_library.git
 cd ppm_library
 pip install -e .
 cd ..
+```
 
-# Clone and install microscope_control
+**Clone and install microscope_control:**
+```bash
 git clone https://github.com/uw-loci/microscope_control.git
 cd microscope_control
 pip install -e .
 cd ..
+```
 
-# Clone and install microscope_command_server
+**Clone and install microscope_command_server:**
+```bash
 git clone https://github.com/uw-loci/microscope_command_server.git
 cd microscope_command_server
 pip install -e .
@@ -351,9 +448,12 @@ Download the latest JAR files from GitHub releases:
 
 Copy both JAR files to QuPath's extensions folder:
 
-- **Windows**: `C:\Users\[YourUsername]\QuPath\extensions\`
-- **macOS**: `~/QuPath/extensions/`
-- **Linux**: `~/QuPath/extensions/`
+- **Windows (MSI install)**: `C:\Users\[YourUsername]\AppData\Local\QuPath-0.6.0\extensions\`
+- **Windows (portable)**: `C:\Users\[YourUsername]\QuPath\extensions\`
+- **macOS**: `~/Library/Application Support/QuPath/extensions/` or `~/QuPath/extensions/`
+- **Linux**: `~/.local/share/QuPath/extensions/` or `~/QuPath/extensions/`
+
+> **Tip:** In QuPath, go to `Edit > Preferences` and look at the "Extension directory" setting to find the exact path on your system.
 
 **Verify installation:**
 1. Launch QuPath
@@ -430,6 +530,52 @@ For step-by-step instructions with screenshots and troubleshooting, see individu
 | **Configuration Templates** | [microscope_configurations](https://github.com/uw-loci/microscope_configurations) | [Configuration Guide](https://github.com/uw-loci/microscope_configurations#usage) |
 | **QPSC Extension** | [qupath-extension-qpsc](https://github.com/uw-loci/qupath-extension-qpsc) | [Extension Docs](https://github.com/uw-loci/qupath-extension-qpsc#installation) |
 | **Stitching Extension** | [qupath-extension-tiles-to-pyramid](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid) | [Extension Docs](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid#installation) |
+
+---
+
+### Troubleshooting QuPath Installation
+
+#### Problem: Setup script reports "QuPath not found"
+
+**Cause:** QuPath is installed in a non-standard location or not installed.
+
+**Solution:**
+
+1. **Verify QuPath is installed:**
+   - Look for QuPath in your Start Menu (Windows) or Applications folder (macOS)
+   - Or download from: https://qupath.github.io/
+
+2. **Find your QuPath installation directory:**
+   - **Windows MSI install:** Usually `C:\Users\YourUsername\AppData\Local\QuPath-0.6.0\`
+   - **Windows portable:** Could be anywhere you extracted it
+   - **macOS:** `/Applications/QuPath.app` or `~/Applications/QuPath.app`
+
+3. **Re-run setup script with QuPath location:**
+   ```powershell
+   .\PPM-QuPath.ps1 -QuPathDir "C:\Users\YourUsername\AppData\Local\QuPath-0.6.0"
+   ```
+
+4. **Or skip QuPath setup and install extensions manually:**
+   ```powershell
+   .\PPM-QuPath.ps1 -SkipQuPath
+   ```
+   Then follow [Step 3: Install QuPath Extensions](#step-3-install-qupath-extensions) to install manually.
+
+#### Problem: Can't find QuPath extensions directory
+
+**Solution:**
+
+1. Launch QuPath
+2. Go to `Edit > Preferences`
+3. Look for "Extension directory" - this shows the exact path
+4. Copy JARs to that directory
+5. Restart QuPath
+
+Common locations:
+- **Windows MSI:** `%LOCALAPPDATA%\QuPath-0.6.0\extensions\`
+- **Windows portable:** `%USERPROFILE%\QuPath\extensions\`
+- **macOS:** `~/Library/Application Support/QuPath/extensions/`
+- **Linux:** `~/.local/share/QuPath/extensions/`
 
 ---
 
@@ -582,6 +728,14 @@ Expected: Server should start and show "Server listening on 0.0.0.0:5000"
 
 #### 4. Test Full Workflow
 See [Usage Guide](docs/usage.md) for a complete workflow walkthrough
+
+---
+
+### Uninstallation
+
+To remove QPSC components for a clean reinstallation or complete uninstall, see the [Uninstallation Guide](UNINSTALL.md).
+
+---
 
 ## Configuration
 

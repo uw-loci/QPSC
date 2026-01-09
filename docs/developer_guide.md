@@ -80,7 +80,7 @@ cp build/libs/qupath-extension-qpsc-*.jar ~/QuPath/extensions/
 source venv_qpsc/bin/activate
 
 # Start server
-python -m microscope_command_server.server.qp_server
+python -m microscope_server.server.qp_server
 ```
 
 ---
@@ -517,7 +517,7 @@ The microscope server uses a two-stage configuration approach:
 **Example workflow:**
 ```python
 # 1. Server starts with generic config
-python -m microscope_command_server.server.qp_server
+python -m microscope_server.server.qp_server
 
 # 2. Client sends ACQUIRE with specific config
 ACQUIRE --yaml /configs/config_PPM.yml --projects /data --sample S001 ...
@@ -726,7 +726,7 @@ def test_acquisition_workflow():
 ### Manual Testing Checklist
 
 1. **Socket Communication:**
-   - Start server: `python -m microscope_command_server.server.qp_server`
+   - Start server: `python -m microscope_server.server.qp_server`
    - Send test commands via telnet or custom client
    - Verify responses
 
