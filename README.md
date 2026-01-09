@@ -192,6 +192,11 @@ See [SETUP_SCRIPTS_README.md](SETUP_SCRIPTS_README.md) for detailed instructions
 
 If you prefer manual setup or are on macOS/Linux:
 
+**Requirements:**
+- Python 3.9 or later
+- pip (Python package installer)
+- Git (for `pip install git+https://...` commands)
+
 #### 1. Install Python Packages from GitHub
 
 **Important**: Packages must be installed in this order due to dependencies:
