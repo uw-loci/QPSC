@@ -492,6 +492,47 @@ The microscope_command_server includes **client commands** (GETXY, GETZ, MOVE, e
 
 The QPSC extension **does NOT** directly call stage movement or position commands during normal acquisition - those are handled internally by the server workflow.
 
+### Server Startup and Configuration
+
+#### Dynamic Configuration Loading
+
+The microscope server uses a two-stage configuration approach:
+
+1. **Startup Configuration**: Generic minimal config allows server to start
+   - Permissive stage limits for exploratory movements
+   - No microscope-specific features enabled
+   - Micro-Manager connection established
+
+2. **Acquisition Configuration**: Full microscope config loaded from client
+   - Provided via `--yaml` parameter in ACQUIRE command
+   - Replaces startup config dynamically
+   - Enables microscope-specific features (PPM rotation, etc.)
+
+**Why this matters:**
+- Server is portable across different microscopes
+- No hardcoded config file dependency
+- Client controls which microscope config is used
+- Config can change between acquisitions
+
+**Example workflow:**
+```python
+# 1. Server starts with generic config
+python -m microscope_command_server.server.qp_server
+
+# 2. Client sends ACQUIRE with specific config
+ACQUIRE --yaml /configs/config_PPM.yml --projects /data --sample S001 ...
+
+# 3. Server loads config_PPM.yml and uses it for acquisition
+
+# 4. Next acquisition can use different config
+ACQUIRE --yaml /configs/config_CAMM.yml --projects /data --sample S002 ...
+```
+
+**Exploratory Commands:**
+Commands like GETXY, MOVE, GETZ use the most recently loaded config:
+- Before first ACQUIRE: Uses generic startup config with permissive stage limits
+- After ACQUIRE: Uses the microscope-specific config from that acquisition
+
 ---
 
 ## Architecture Overview
