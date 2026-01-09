@@ -75,7 +75,7 @@ flowchart LR
 1. **Setup Coordinates** - Use known/estimated stage coordinates, or load an image from a slide scanner to enable mapping of stage coordinates to locations on the slide
 2. **Define Regions** - Draw annotations on areas of interest
 3. **Configure Acquisition** - Select imaging modality, objectives, and parameters
-4. **Acquire** - QPSC sends a workflow to the microscope to capture high-resolution tiles
+4. **Acquire** - The QPSC extension sends a workflow to the microscope command server to capture high-resolution tiles
 5. **Stitch & Import** - Tiles are stitched in a QuPath extension into pyramidal images and imported into a QuPath project along with metadata for sorting the results
 
 ## Component Repositories
@@ -136,21 +136,41 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
 
 ### Prerequisites
 
-- [QuPath](https://qupath.github.io/) 0.6.0+
-- [Micro-Manager](https://micro-manager.org/) 2.0+
-- Python 3.9+
-- Java 21+ (for development only)
+QPSC requires the following components **in this order**:
+
+### 1. Micro-Manager (Hardware Control)
+- **Version**: 2.0+
+- **Purpose**: Controls microscope hardware via device adapters
+- **Installation**: See [Micro-Manager Installation Guide](https://micro-manager.org/Download_Micro-Manager_Latest_Release)
+- **Note**: Configure device adapters for your specific hardware before proceeding
+
+### 2. QuPath (Digital Pathology Platform)
+- **Version**: 0.6.0+
+- **Purpose**: Annotation interface and image analysis
+- **Installation**: Download from [QuPath website](https://qupath.github.io/)
+
+### 3. Python Environment (Microscope Control Server)
+- **Version**: Python 3.9+
+- **Purpose**: Socket server connecting QuPath to microscope hardware
+- **Installation**: See [Installation](#automated-installation-windows) section below
+
+### 4. QPSC QuPath Extensions (JAR files)
+- **Version**: Latest releases
+- **Purpose**: QuPath UI for annotation-driven acquisition and stitching
+- **Installation**: Downloaded automatically by setup script or manually from releases
+
+### 5. Java Development Kit (For Extension Development Only)
+- **Version**: Java 21+
+- **Purpose**: Building QuPath extensions from source
+- **Note**: Not required for using QPSC, only for modifying extension code
 
 ### Automated Installation (Windows)
 
 **Recommended for most users:**
 
-We provide PowerShell setup scripts for automated installation:
+We provide a PowerShell setup script with two modes:
 
-- **`PPM-QuPath.ps1`** - Production setup (downloads pre-built binaries)
-- **`PPM-QuPath-dev.ps1`** - Development setup (clones all source repositories)
-
-**Usage:**
+**Production Setup** (quick start, installs from GitHub):
 ```powershell
 # Download the setup script
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-QuPath.ps1" -OutFile "PPM-QuPath.ps1"
@@ -158,69 +178,77 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-
 # Run the setup script
 .\PPM-QuPath.ps1
 ```
+Installs Python packages from GitHub, downloads QuPath extensions and config templates.
+
+**Development Setup** (for code modification):
+```powershell
+.\PPM-QuPath.ps1 -Development
+```
+Clones all repositories and installs in editable mode for development.
 
 See [SETUP_SCRIPTS_README.md](SETUP_SCRIPTS_README.md) for detailed instructions and parameters.
 
 ### Manual Installation
 
-#### 1. Install QuPath Extensions
+If you prefer manual setup or are on macOS/Linux:
 
-**IMPORTANT:** QuPath extensions must be manually downloaded and installed.
+#### 1. Install Python Packages from GitHub
 
-- Download latest JAR files from releases:
-  - [qupath-extension-qpsc releases](https://github.com/uw-loci/qupath-extension-qpsc/releases)
-  - [qupath-extension-tiles-to-pyramid releases](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid/releases)
-- Place JAR files in QuPath's `extensions` folder (typically `C:\Users\YourName\QuPath\extensions`)
-
-#### 2. Set Up Python Microscope Control
+**Important**: Packages must be installed in this order due to dependencies:
 
 ```bash
-# Install all microscope control packages
-pip install microscope-server
+# 1. PPM Library (no dependencies on other QPSC packages)
+pip install git+https://github.com/uw-loci/ppm_library.git
 
-# This automatically installs dependencies:
-# - microscope-control (hardware abstraction)
-# - ppm-library (image processing)
+# 2. Microscope Control (depends on ppm_library)
+pip install git+https://github.com/uw-loci/microscope_control.git
+
+# 3. Microscope Command Server (depends on both above)
+pip install git+https://github.com/uw-loci/microscope_command_server.git
 ```
 
-**For development:**
+**For development/modification**, clone and install in editable mode:
 ```bash
 git clone https://github.com/uw-loci/ppm_library.git
+cd ppm_library && pip install -e . && cd ..
+
 git clone https://github.com/uw-loci/microscope_control.git
+cd microscope_control && pip install -e . && cd ..
+
 git clone https://github.com/uw-loci/microscope_command_server.git
-
-pip install -e ppm_library/
-pip install -e microscope_control/
-pip install -e microscope_command_server/
+cd microscope_command_server && pip install -e . && cd ..
 ```
 
-#### 3. Configure Microscope
+See individual repository READMEs for component-specific details:
+- [ppm_library](https://github.com/uw-loci/ppm_library) - Image processing library
+- [microscope_control](https://github.com/uw-loci/microscope_control) - Hardware abstraction
+- [microscope_command_server](https://github.com/uw-loci/microscope_command_server) - Socket server
 
-**IMPORTANT:** Configuration files must be manually created for your specific hardware.
+#### 2. Install QuPath Extensions
 
-```bash
-# Download configuration templates
-git clone https://github.com/uw-loci/microscope_configurations.git
-cd microscope_configurations
+Download the latest release JAR files:
+- [qupath-extension-qpsc](https://github.com/uw-loci/qupath-extension-qpsc/releases)
+- [qupath-extension-tiles-to-pyramid](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid/releases)
 
-# Copy and edit templates for your microscope
-cp config_template.yml config_my_microscope.yml
-# Edit config_my_microscope.yml with your hardware settings
-```
+Place in QuPath's extensions folder:
+- **Windows**: `C:\Users\YourName\QuPath\extensions\`
+- **macOS**: `~/QuPath/extensions/`
+- **Linux**: `~/QuPath/extensions/`
 
-See [Configuration Guide](docs/configuration.md) for details on configuring your specific hardware.
+#### 3. Download Configuration Templates
 
-#### 4. Set Up Micro-Manager
+Download from [microscope_configurations repository](https://github.com/uw-loci/microscope_configurations):
+- `templates/config_template.yml`
+- `templates/autofocus_template.yml`
+- `templates/imageprocessing_template.yml`
 
-- Install [Micro-Manager 2.0+](https://micro-manager.org/)
-- Configure device adapters for your microscope hardware
-- Test hardware connectivity in Micro-Manager GUI
+Edit `config_template.yml` for your hardware setup.
 
-#### 5. Launch QPSC
+#### 4. Launch QPSC
 
 ```bash
 # Start the microscope server
-microscope-server
+python -m microscope_command_server.server.qp_server
 
 # In a separate terminal or window:
 # Start QuPath and access QPSC from Extensions > QPSC menu

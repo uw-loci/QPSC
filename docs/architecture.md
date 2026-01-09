@@ -151,11 +151,11 @@ qupath/ext/qpsc/
 
 #### qupath-extension-tiles-to-pyramid
 
-**Purpose:** Stitches acquired microscope tiles into pyramidal OME-ZARR images for QuPath.
+**Purpose:** Stitches acquired OME-TIFF microscope tiles into pyramidal image files (OME-TIFF or OME-ZARR) for QuPath.
 
 **Key Responsibilities:**
 - Tile stitching algorithms
-- OME-ZARR pyramid generation
+- Pyramidal image generation (OME-TIFF default, OME-ZARR optional)
 - Metadata preservation
 - QuPath project import
 
@@ -330,7 +330,7 @@ sequenceDiagram
 
 ## Coordinate Systems
 
-QPSC handles multiple coordinate systems and transformations:
+The QPSC extension handles multiple coordinate systems and transformations:
 
 ### Coordinate System Types
 
@@ -418,14 +418,19 @@ public interface ModalityHandler {
      - Apply background correction
      - Save to disk
          ↓
-5. Python server stitches tiles → OME-ZARR pyramid
+5. Python server signals completion (tiles saved as OME-TIFF)
          ↓
-6. Python server signals completion
+6. QuPath extension stitches OME-TIFF tiles → Pyramidal OME-TIFF
          ↓
-7. QuPath imports OME-ZARR into project
+7. QuPath imports stitched image into project
          ↓
 8. QuPath applies metadata (sample name, offsets, relationships)
 ```
+
+**Image Output Formats:**
+- **Acquisition tiles**: Individual OME-TIFF files (one per angle/exposure combination)
+- **Stitched result**: Pyramidal OME-TIFF files (default) or OME-ZARR (optional)
+- **Stitching performed by**: QuPath extension (qupath-extension-tiles-to-pyramid), not Python server
 
 ---
 
