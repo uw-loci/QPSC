@@ -153,6 +153,39 @@ if ($Development) {
     Write-Host "[+] Python packages installed" -ForegroundColor Green
 }
 
+# Verify package installation
+Write-Host ""
+Write-Host "[+] Verifying package installation..." -ForegroundColor Cyan
+
+$packagesToVerify = @("microscope-server", "microscope-control", "ppm-library", "pycromanager")
+$allPackagesInstalled = $true
+
+foreach ($pkg in $packagesToVerify) {
+    $verifyResult = pip show $pkg 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "    [OK] $pkg" -ForegroundColor Green
+    } else {
+        Write-Host "    [FAIL] $pkg - NOT INSTALLED" -ForegroundColor Red
+        $allPackagesInstalled = $false
+    }
+}
+
+if (-not $allPackagesInstalled) {
+    Write-Host ""
+    Write-Host "[!] ERROR: Some packages failed to install!" -ForegroundColor Red
+    Write-Host "    Please check the error messages above and try again." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "    Common fixes:" -ForegroundColor Yellow
+    Write-Host "      - Ensure you have internet connection" -ForegroundColor White
+    Write-Host "      - Try running: pip install --upgrade pip" -ForegroundColor White
+    Write-Host "      - Check if Git is installed (required for git+ URLs)" -ForegroundColor White
+    Write-Host ""
+    exit 1
+}
+
+Write-Host ""
+Write-Host "[+] All packages verified successfully" -ForegroundColor Green
+
 # Download configuration templates
 Write-Host ""
 Write-Host "[+] Downloading configuration templates..." -ForegroundColor Cyan
@@ -442,7 +475,7 @@ Write-Host "Starting QPSC System..." -ForegroundColor Cyan
 
 # Start microscope server in background
 Write-Host "[+] Starting microscope server..." -ForegroundColor Green
-$pythonCmd
+Start-Process -NoNewWindow -FilePath "python" -ArgumentList "-m", "microscope_server.server.qp_server"
 
 # Wait for server to initialize
 Start-Sleep -Seconds 3
@@ -451,8 +484,11 @@ Start-Sleep -Seconds 3
 if (`$args -contains "--qupath") {
     Write-Host "[+] Launching QuPath..." -ForegroundColor Green
     `$quPathExe = "$quPathExe"
-    if (Test-Path `$quPathExe) {
+    if (`$quPathExe -and (Test-Path `$quPathExe)) {
         Start-Process `$quPathExe
+    } elseif (-not `$quPathExe) {
+        Write-Host "[!] QuPath path not configured in launcher script" -ForegroundColor Yellow
+        Write-Host "    Please specify QuPath path manually or re-run setup with -QuPathDir parameter" -ForegroundColor Yellow
     } else {
         Write-Host "[!] QuPath not found at: `$quPathExe" -ForegroundColor Red
     }
