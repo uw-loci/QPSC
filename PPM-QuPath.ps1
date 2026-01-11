@@ -343,12 +343,26 @@ if (-not $SkipQuPath) {
     )
 
     foreach ($path in $searchPaths) {
-        if ($path -and (Test-Path "$path\QuPath.exe" -ErrorAction SilentlyContinue)) {
-            $quPathExe = "$path\QuPath.exe"
-            $QuPathDir = $path
-            Write-Host "    Found QuPath at: $path" -ForegroundColor Green
-            break
+        if (-not $path) { continue }
+
+        # Try multiple QuPath executable locations
+        $possibleExes = @(
+            "$path\QuPath.exe",           # Standard location
+            "$path\QuPath-*.exe",         # Versioned executable (e.g., QuPath-0.6.0.exe)
+            "$path\bin\QuPath.exe"        # Alternative location
+        )
+
+        foreach ($exePattern in $possibleExes) {
+            $foundExe = Get-ChildItem -Path $exePattern -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($foundExe) {
+                $quPathExe = $foundExe.FullName
+                $QuPathDir = $path
+                Write-Host "    Found QuPath at: $quPathExe" -ForegroundColor Green
+                break
+            }
         }
+
+        if ($quPathExe) { break }
     }
 
     if (-not $quPathExe) {
