@@ -124,8 +124,30 @@ if ($Development) {
     Write-Host "    To activate: $activateScript" -ForegroundColor Cyan
 
 } else {
-    Write-Host "    Mode: Production (GitHub URL installation)" -ForegroundColor Yellow
+    Write-Host "    Mode: Production (GitHub URL installation with virtual environment)" -ForegroundColor Yellow
     Write-Host ""
+
+    # Create virtual environment
+    $venvPath = Join-Path $InstallDir "venv_qpsc"
+    if (-not (Test-Path $venvPath)) {
+        Write-Host "[+] Creating virtual environment: venv_qpsc" -ForegroundColor Green
+        python -m venv $venvPath
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[!] Failed to create virtual environment" -ForegroundColor Red
+            Write-Host "    Please ensure Python venv module is available" -ForegroundColor Yellow
+            exit 1
+        }
+    } else {
+        Write-Host "[!] Virtual environment exists (skipping creation)" -ForegroundColor Yellow
+    }
+
+    # Get activation script path
+    $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
+
+    Write-Host ""
+    Write-Host "[+] Installing packages into virtual environment..." -ForegroundColor Green
+    Write-Host "    Virtual environment: $venvPath" -ForegroundColor Cyan
 
     # Install from GitHub URLs in dependency order
     $githubPackages = @(
@@ -140,7 +162,11 @@ if ($Development) {
         $pkgUrl = $pkg.url
 
         Write-Host "    -> Installing: $pkgName" -ForegroundColor White
+
+        # Run pip install in the virtual environment
+        & $activateScript
         pip install --upgrade $pkgUrl
+        deactivate
 
         if ($LASTEXITCODE -ne 0) {
             Write-Host "       [!] Failed to install $pkgName" -ForegroundColor Red
@@ -150,7 +176,9 @@ if ($Development) {
     }
 
     Write-Host ""
-    Write-Host "[+] Python packages installed" -ForegroundColor Green
+    Write-Host "[+] Python packages installed in virtual environment" -ForegroundColor Green
+    Write-Host "    Virtual environment: $venvPath" -ForegroundColor Cyan
+    Write-Host "    To activate: $activateScript" -ForegroundColor Cyan
 }
 
 # Verify package installation
@@ -159,6 +187,13 @@ Write-Host "[+] Verifying package installation..." -ForegroundColor Cyan
 
 $packagesToVerify = @("microscope-server", "microscope-control", "ppm-library", "pycromanager")
 $allPackagesInstalled = $true
+
+# Both Development and Production modes now use venv
+$venvPath = Join-Path $InstallDir "venv_qpsc"
+$activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
+
+# Activate venv and check packages
+& $activateScript
 
 foreach ($pkg in $packagesToVerify) {
     $verifyResult = pip show $pkg 2>&1
@@ -169,6 +204,8 @@ foreach ($pkg in $packagesToVerify) {
         $allPackagesInstalled = $false
     }
 }
+
+deactivate
 
 if (-not $allPackagesInstalled) {
     Write-Host ""
@@ -476,11 +513,16 @@ Write-Host ""
 
 # Verify Python packages are installed
 Write-Host "[+] Verifying Python packages..." -ForegroundColor Cyan
+
+# Use venv pip and python
+`$venvPip = "$InstallDir\venv_qpsc\Scripts\pip.exe"
+`$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
+
 `$packagesOK = `$true
 `$requiredPackages = @("microscope-server", "microscope-control", "ppm-library", "pycromanager")
 
 foreach (`$pkg in `$requiredPackages) {
-    `$result = pip show `$pkg 2>`$null
+    `$result = & `$venvPip show `$pkg 2>`$null
     if (`$LASTEXITCODE -ne 0) {
         Write-Host "    [FAIL] `$pkg - NOT INSTALLED" -ForegroundColor Red
         `$packagesOK = `$false
@@ -504,7 +546,7 @@ Write-Host ""
 
 # Test if Python can import the server module
 Write-Host "[+] Testing server module import..." -ForegroundColor Cyan
-`$importTest = python -c "import microscope_server.server.qp_server; print('OK')" 2>&1
+`$importTest = & `$venvPython -c "import microscope_server.server.qp_server; print('OK')" 2>&1
 if (`$LASTEXITCODE -ne 0) {
     Write-Host "    [FAIL] Cannot import microscope_server module" -ForegroundColor Red
     Write-Host ""
@@ -524,7 +566,8 @@ Write-Host ""
 
 # Start microscope server in background
 Write-Host "[+] Starting microscope server..." -ForegroundColor Green
-Start-Process -NoNewWindow -FilePath "python" -ArgumentList "-m", "microscope_server.server.qp_server"
+`$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
+Start-Process -NoNewWindow -FilePath `$venvPython -ArgumentList "-m", "microscope_server.server.qp_server"
 
 # Wait for server to initialize
 Start-Sleep -Seconds 3
