@@ -472,6 +472,55 @@ $launcherScript = @"
 # Starts Micro-Manager server and optionally QuPath
 
 Write-Host "Starting QPSC System..." -ForegroundColor Cyan
+Write-Host ""
+
+# Verify Python packages are installed
+Write-Host "[+] Verifying Python packages..." -ForegroundColor Cyan
+`$packagesOK = `$true
+`$requiredPackages = @("microscope-server", "microscope-control", "ppm-library", "pycromanager")
+
+foreach (`$pkg in `$requiredPackages) {
+    `$result = pip show `$pkg 2>`$null
+    if (`$LASTEXITCODE -ne 0) {
+        Write-Host "    [FAIL] `$pkg - NOT INSTALLED" -ForegroundColor Red
+        `$packagesOK = `$false
+    } else {
+        Write-Host "    [OK] `$pkg" -ForegroundColor Green
+    }
+}
+
+if (-not `$packagesOK) {
+    Write-Host ""
+    Write-Host "[!] ERROR: Required packages are missing!" -ForegroundColor Red
+    Write-Host "    Please run the setup script again:" -ForegroundColor Yellow
+    Write-Host "    .\PPM-QuPath.ps1" -ForegroundColor White
+    Write-Host ""
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
+Write-Host "    All packages verified" -ForegroundColor Green
+Write-Host ""
+
+# Test if Python can import the server module
+Write-Host "[+] Testing server module import..." -ForegroundColor Cyan
+`$importTest = python -c "import microscope_server.server.qp_server; print('OK')" 2>&1
+if (`$LASTEXITCODE -ne 0) {
+    Write-Host "    [FAIL] Cannot import microscope_server module" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Error details:" -ForegroundColor Yellow
+    Write-Host `$importTest -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "    Please run the setup script again:" -ForegroundColor Yellow
+    Write-Host "    .\PPM-QuPath.ps1" -ForegroundColor White
+    Write-Host ""
+    Read-Host "Press Enter to exit"
+    exit 1
+} else {
+    Write-Host "    Server module import successful" -ForegroundColor Green
+}
+
+Write-Host ""
 
 # Start microscope server in background
 Write-Host "[+] Starting microscope server..." -ForegroundColor Green
@@ -740,6 +789,12 @@ $summaryContent += @"
 3. Launch QPSC:
    $launcherPath --qupath
 
+   3b. If QuPath is in a non-standard location:
+       Re-run setup with -QuPathDir parameter:
+       .\PPM-QuPath.ps1 -QuPathDir "D:\YourPath\QuPath-0.6.0"
+
+       Or manually copy extension JARs to your QuPath extensions folder
+
 ========================================
 TROUBLESHOOTING
 ========================================
@@ -885,6 +940,9 @@ Write-Host "  2. Set up Micro-Manager device adapters for your hardware" -Foregr
 Write-Host ""
 Write-Host "  3. Launch QPSC:" -ForegroundColor White
 Write-Host "     $launcherPath --qupath" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "     3b. If QuPath is in a non-standard location:" -ForegroundColor White
+Write-Host "         .\PPM-QuPath.ps1 -QuPathDir ""D:\YourPath\QuPath-0.6.0""" -ForegroundColor Yellow
 
 if (-not $Development) {
     Write-Host ""
