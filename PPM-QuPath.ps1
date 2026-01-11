@@ -96,7 +96,7 @@ if ($Development) {
 
     # Install packages in editable mode (dependency order is critical)
     Write-Host "[+] Installing packages in editable mode..." -ForegroundColor Green
-    $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
+    $venvPip = Join-Path $venvPath "Scripts\pip.exe"
 
     $installOrder = @(
         "ppm_library",
@@ -108,15 +108,13 @@ if ($Development) {
         $pkgPath = Join-Path $InstallDir $pkg
         if (Test-Path $pkgPath) {
             Write-Host "    -> Installing: $pkg" -ForegroundColor Cyan
-            & $activateScript
-            pip install -e $pkgPath
+            & $venvPip install -e $pkgPath
         }
     }
 
     # Also install pycromanager
     Write-Host "    -> Installing: pycromanager" -ForegroundColor Cyan
-    & $activateScript
-    pip install pycromanager
+    & $venvPip install pycromanager
 
     Write-Host ""
     Write-Host "[+] Python packages installed in development mode" -ForegroundColor Green
@@ -163,10 +161,9 @@ if ($Development) {
 
         Write-Host "    -> Installing: $pkgName" -ForegroundColor White
 
-        # Run pip install in the virtual environment
-        & $activateScript
-        pip install --upgrade $pkgUrl
-        deactivate
+        # Use venv pip directly (activation doesn't persist across commands)
+        $venvPip = Join-Path $venvPath "Scripts\pip.exe"
+        & $venvPip install --upgrade $pkgUrl
 
         if ($LASTEXITCODE -ne 0) {
             Write-Host "       [!] Failed to install $pkgName" -ForegroundColor Red
@@ -190,13 +187,11 @@ $allPackagesInstalled = $true
 
 # Both Development and Production modes now use venv
 $venvPath = Join-Path $InstallDir "venv_qpsc"
-$activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
+$venvPip = Join-Path $venvPath "Scripts\pip.exe"
 
-# Activate venv and check packages
-& $activateScript
-
+# Check packages using venv pip directly
 foreach ($pkg in $packagesToVerify) {
-    $verifyResult = pip show $pkg 2>&1
+    $verifyResult = & $venvPip show $pkg 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "    [OK] $pkg" -ForegroundColor Green
     } else {
@@ -204,8 +199,6 @@ foreach ($pkg in $packagesToVerify) {
         $allPackagesInstalled = $false
     }
 }
-
-deactivate
 
 if (-not $allPackagesInstalled) {
     Write-Host ""
