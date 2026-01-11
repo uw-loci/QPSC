@@ -656,24 +656,27 @@ Configuration Repository:
 
 "@
 } else {
-    # Get Python location
-    $pythonLocation = (Get-Command python -ErrorAction SilentlyContinue).Source
-    if (-not $pythonLocation) {
-        $pythonLocation = "Python executable not found in PATH"
-    }
-
+    # Production mode also uses venv now
+    $venvPath = Join-Path $InstallDir "venv_qpsc"
     $summaryContent += @"
-Python Installation:
-  $pythonLocation
+Python Virtual Environment:
+  $venvPath
 
-  QPSC packages installed to Python's site-packages directory.
-  This is typically:
-    %APPDATA%\Python\Python3XX\site-packages  (user install)
-    OR
-    C:\ProgramData\Python3XX\Lib\site-packages  (system install)
+  To activate the virtual environment:
+    Windows PowerShell:
+      $venvPath\Scripts\Activate.ps1
 
-  To find exact location:
-    python -c "import microscope_server; print(microscope_server.__file__)"
+    Command Prompt:
+      $venvPath\Scripts\activate.bat
+
+Python Packages (Installed from GitHub):
+  ppm-library
+  microscope-control
+  microscope-server
+  pycromanager
+
+  Packages are installed in:
+    $venvPath\Lib\site-packages
 
 "@
 }
@@ -852,17 +855,12 @@ TROUBLESHOOTING
 If packages are not found:
 "@
 
-if ($Development) {
-    $summaryContent += @"
-  - Make sure virtual environment is activated
-  - Check: pip list (should show microscope-server, microscope-control, ppm-library)
+# Both modes use venv now
+$summaryContent += @"
+  - Make sure to use venv Python: $venvPath\Scripts\python.exe
+  - Check packages: $venvPath\Scripts\pip.exe list
+  - Test import: $venvPath\Scripts\python.exe -c "import microscope_server"
 "@
-} else {
-    $summaryContent += @"
-  - Check: pip list (should show microscope-server, microscope-control, ppm-library)
-  - Reinstall packages: pip install --force-reinstall microscope-server
-"@
-}
 
 $summaryContent += @"
 
@@ -927,7 +925,7 @@ if ($Development) {
     Write-Host "  [+] Python packages (editable mode in venv_qpsc)" -ForegroundColor White
     Write-Host "  [+] All repositories cloned for development" -ForegroundColor White
 } else {
-    Write-Host "  [+] Python packages (from GitHub)" -ForegroundColor White
+    Write-Host "  [+] Python packages (from GitHub in venv_qpsc)" -ForegroundColor White
 }
 
 Write-Host "  [+] Configuration templates" -ForegroundColor White
@@ -943,27 +941,18 @@ if (-not $SkipQuPath) {
 Write-Host ""
 Write-Host "Python Environment:" -ForegroundColor Cyan
 
-if ($Development) {
-    $venvPath = Join-Path $InstallDir "venv_qpsc"
-    Write-Host "  Location: $venvPath" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  To activate:" -ForegroundColor White
-    Write-Host "    $venvPath\Scripts\Activate.ps1" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  To verify packages (after activating):" -ForegroundColor White
-    Write-Host "    pip list | Select-String ""microscope|ppm""" -ForegroundColor Yellow
-} else {
-    $pythonLocation = (Get-Command python -ErrorAction SilentlyContinue).Source
-    Write-Host "  Python: $pythonLocation" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  Packages installed to: Python site-packages" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  To verify packages:" -ForegroundColor White
-    Write-Host "    pip list | Select-String ""microscope|ppm""" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  To find package locations:" -ForegroundColor White
-    Write-Host "    python -c ""import microscope_server; print(microscope_server.__file__)""" -ForegroundColor Yellow
-}
+# Both Development and Production now use venv
+$venvPath = Join-Path $InstallDir "venv_qpsc"
+Write-Host "  Location: $venvPath" -ForegroundColor White
+Write-Host ""
+Write-Host "  To activate:" -ForegroundColor White
+Write-Host "    $venvPath\Scripts\Activate.ps1" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  To verify packages:" -ForegroundColor White
+Write-Host "    $venvPath\Scripts\pip.exe list | Select-String ""microscope|ppm""" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  To test import:" -ForegroundColor White
+Write-Host "    $venvPath\Scripts\python.exe -c ""import microscope_server; print('OK')""" -ForegroundColor Yellow
 
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan
