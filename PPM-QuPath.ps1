@@ -151,7 +151,7 @@ if ($Development) {
     $githubPackages = @(
         @{name="ppm-library"; url="git+https://github.com/uw-loci/ppm_library.git"},
         @{name="microscope-control"; url="git+https://github.com/uw-loci/microscope_control.git"},
-        @{name="microscope-server"; url="git+https://github.com/uw-loci/microscope_command_server.git"},
+        @{name="microscope-command-server"; url="git+https://github.com/uw-loci/microscope_command_server.git"},
         @{name="pycromanager"; url="pycromanager"}
     )
 
@@ -182,7 +182,7 @@ if ($Development) {
 Write-Host ""
 Write-Host "[+] Verifying package installation..." -ForegroundColor Cyan
 
-$packagesToVerify = @("microscope-server", "microscope-control", "ppm-library", "pycromanager")
+$packagesToVerify = @("microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
 $allPackagesInstalled = $true
 
 # Both Development and Production modes now use venv
@@ -526,7 +526,7 @@ Write-Host "[+] Verifying Python packages..." -ForegroundColor Cyan
 `$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
 
 `$packagesOK = `$true
-`$requiredPackages = @("microscope-server", "microscope-control", "ppm-library", "pycromanager")
+`$requiredPackages = @("microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
 
 foreach (`$pkg in `$requiredPackages) {
     `$result = & `$venvPip show `$pkg 2>`$null
@@ -553,9 +553,9 @@ Write-Host ""
 
 # Test if Python can import the server module
 Write-Host "[+] Testing server module import..." -ForegroundColor Cyan
-`$importTest = & `$venvPython -c "import microscope_server.server.qp_server; print('OK')" 2>&1
+`$importTest = & `$venvPython -c "import microscope_command_server.server.qp_server; print('OK')" 2>&1
 if (`$LASTEXITCODE -ne 0) {
-    Write-Host "    [FAIL] Cannot import microscope_server module" -ForegroundColor Red
+    Write-Host "    [FAIL] Cannot import microscope_command_server module" -ForegroundColor Red
     Write-Host ""
     Write-Host "Error details:" -ForegroundColor Yellow
     Write-Host `$importTest -ForegroundColor Gray
@@ -574,7 +574,7 @@ Write-Host ""
 # Start microscope server in background
 Write-Host "[+] Starting microscope server..." -ForegroundColor Green
 `$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
-Start-Process -NoNewWindow -FilePath `$venvPython -ArgumentList "-m", "microscope_server.server.qp_server"
+Start-Process -NoNewWindow -FilePath `$venvPython -ArgumentList "-m", "microscope_command_server.server.qp_server"
 
 # Wait for server to initialize
 Start-Sleep -Seconds 3
@@ -647,9 +647,9 @@ Python Virtual Environment:
       source $venvPath/bin/activate
 
 Python Packages (Editable Install):
-  ppm-library:               $InstallDir\ppm_library
-  microscope-control:        $InstallDir\microscope_control
-  microscope-server:         $InstallDir\microscope_command_server
+  ppm-library:                 $InstallDir\ppm_library
+  microscope-control:          $InstallDir\microscope_control
+  microscope-command-server:   $InstallDir\microscope_command_server
 
 Configuration Repository:
   $InstallDir\microscope_configurations
@@ -672,7 +672,7 @@ Python Virtual Environment:
 Python Packages (Installed from GitHub):
   ppm-library
   microscope-control
-  microscope-server
+  microscope-command-server
   pycromanager
 
   Packages are installed in:
@@ -729,7 +729,7 @@ if ($Development) {
 
 $summaryContent += @"
    # Then check installed packages:
-   pip show microscope-server
+   pip show microscope-command-server
    pip show microscope-control
    pip show ppm-library
    pip show pycromanager
@@ -774,7 +774,7 @@ if ($Development) {
 [+] Python Packages (editable mode):
     - ppm-library
     - microscope-control
-    - microscope-server
+    - microscope-command-server
     - pycromanager
 [+] Source Code Repositories:
     - ppm_library/
@@ -784,10 +784,10 @@ if ($Development) {
 "@
 } else {
     $summaryContent += @"
-[+] Python Packages (from GitHub releases):
+[+] Python Packages (from GitHub):
     - ppm-library
     - microscope-control
-    - microscope-server
+    - microscope-command-server
     - pycromanager
 "@
 }
