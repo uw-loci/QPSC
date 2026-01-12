@@ -147,6 +147,31 @@ if ($Development) {
     Write-Host "[+] Installing packages into virtual environment..." -ForegroundColor Green
     Write-Host "    Virtual environment: $venvPath" -ForegroundColor Cyan
 
+    # Install OpenCV via conda if available (required for autofocus)
+    Write-Host ""
+    Write-Host "    -> Checking for OpenCV (required for autofocus)..." -ForegroundColor White
+    $condaExe = Get-Command conda -ErrorAction SilentlyContinue
+    if ($condaExe) {
+        Write-Host "       conda detected, installing opencv via conda..." -ForegroundColor Cyan
+        & conda install -c conda-forge opencv -y --prefix $venvPath 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "       [OK] opencv installed via conda" -ForegroundColor Green
+        } else {
+            Write-Host "       [!] conda install failed, will try pip fallback" -ForegroundColor Yellow
+            $venvPip = Join-Path $venvPath "Scripts\pip.exe"
+            & $venvPip install opencv-python-headless
+        }
+    } else {
+        Write-Host "       conda not found, installing opencv via pip..." -ForegroundColor Cyan
+        $venvPip = Join-Path $venvPath "Scripts\pip.exe"
+        & $venvPip install opencv-python-headless
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "       [OK] opencv installed via pip" -ForegroundColor Green
+        } else {
+            Write-Host "       [!] opencv installation failed - autofocus may not work" -ForegroundColor Yellow
+        }
+    }
+
     # Install from GitHub URLs in dependency order
     $githubPackages = @(
         @{name="ppm-library"; url="git+https://github.com/uw-loci/ppm_library.git"},
@@ -549,6 +574,29 @@ if (-not `$packagesOK) {
 }
 
 Write-Host "    All packages verified" -ForegroundColor Green
+Write-Host ""
+
+# Test if OpenCV (cv2) can be imported
+Write-Host "[+] Testing OpenCV import (required for autofocus)..." -ForegroundColor Cyan
+$opencvTest = & $venvPython -c "import cv2; print('OK')" 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "    [FAIL] Cannot import OpenCV (cv2)" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Error details:" -ForegroundColor Yellow
+    Write-Host $opencvTest -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "    Autofocus features will not work without OpenCV." -ForegroundColor Yellow
+    Write-Host "    To fix this issue:" -ForegroundColor Yellow
+    Write-Host "      1. Install Visual C++ Redistributables: https://aka.ms/vs/17/release/vc_redist.x64.exe" -ForegroundColor White
+    Write-Host "      2. Or manually install opencv via conda: conda install -c conda-forge opencv -y --prefix $venvPath" -ForegroundColor White
+    Write-Host ""
+    $continue = Read-Host "Continue anyway? (y/N)"
+    if ($continue -ne 'y' -and $continue -ne 'Y') {
+        exit 1
+    }
+} else {
+    Write-Host "    OpenCV import successful" -ForegroundColor Green
+}
 Write-Host ""
 
 # Test if Python can import the server module
