@@ -147,31 +147,6 @@ if ($Development) {
     Write-Host "[+] Installing packages into virtual environment..." -ForegroundColor Green
     Write-Host "    Virtual environment: $venvPath" -ForegroundColor Cyan
 
-    # Install OpenCV via conda if available (required for autofocus)
-    Write-Host ""
-    Write-Host "    -> Checking for OpenCV (required for autofocus)..." -ForegroundColor White
-    $condaExe = Get-Command conda -ErrorAction SilentlyContinue
-    if ($condaExe) {
-        Write-Host "       conda detected, installing opencv via conda..." -ForegroundColor Cyan
-        & conda install -c conda-forge opencv -y --prefix $venvPath 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "       [OK] opencv installed via conda" -ForegroundColor Green
-        } else {
-            Write-Host "       [!] conda install failed, will try pip fallback" -ForegroundColor Yellow
-            $venvPip = Join-Path $venvPath "Scripts\pip.exe"
-            & $venvPip install opencv-python-headless
-        }
-    } else {
-        Write-Host "       conda not found, installing opencv via pip..." -ForegroundColor Cyan
-        $venvPip = Join-Path $venvPath "Scripts\pip.exe"
-        & $venvPip install opencv-python-headless
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "       [OK] opencv installed via pip" -ForegroundColor Green
-        } else {
-            Write-Host "       [!] opencv installation failed - autofocus may not work" -ForegroundColor Yellow
-        }
-    }
-
     # Install from GitHub URLs in dependency order
     $githubPackages = @(
         @{name="ppm-library"; url="git+https://github.com/uw-loci/ppm_library.git"},
@@ -464,13 +439,34 @@ if (-not $SkipQuPath) {
 
             Write-Host "    -> Checking: $extName" -ForegroundColor White
 
-            # Get latest release
-            $apiUrl = "https://api.github.com/repos/$extRepo/releases/latest"
+            # Get latest release (including prereleases)
+            $apiUrl = "https://api.github.com/repos/$extRepo/releases"
             try {
-                $release = Invoke-RestMethod -Uri $apiUrl -ErrorAction Stop
+                $releases = Invoke-RestMethod -Uri $apiUrl -ErrorAction Stop
 
-                # Find JAR file in assets
-                $jarAsset = $release.assets | Where-Object { $_.name -like "*.jar" } | Select-Object -First 1
+                if ($releases.Count -eq 0) {
+                    Write-Host "       [!] No releases found" -ForegroundColor Yellow
+                    continue
+                }
+
+                # Get most recent release (first in list, regardless of prerelease status)
+                $release = $releases[0]
+                $releaseTag = $release.tag_name
+                $isPrerelease = $release.prerelease
+
+                if ($isPrerelease) {
+                    Write-Host "       Found: $releaseTag (prerelease)" -ForegroundColor Yellow
+                } else {
+                    Write-Host "       Found: $releaseTag" -ForegroundColor Green
+                }
+
+                # Find JAR file in assets - prefer -all.jar (shadow JAR with bundled dependencies)
+                $jarAsset = $release.assets | Where-Object { $_.name -like "*-all.jar" } | Select-Object -First 1
+
+                # Fallback to regular .jar if -all.jar not found
+                if (-not $jarAsset) {
+                    $jarAsset = $release.assets | Where-Object { $_.name -like "*.jar" } | Select-Object -First 1
+                }
 
                 if ($jarAsset) {
                     $jarName = $jarAsset.name
@@ -485,10 +481,11 @@ if (-not $SkipQuPath) {
                         Write-Host "       Installed: $jarName" -ForegroundColor Green
                     }
                 } else {
-                    Write-Host "       [!] No JAR file found in latest release" -ForegroundColor Yellow
+                    Write-Host "       [!] No JAR file found in release $releaseTag" -ForegroundColor Yellow
                 }
             } catch {
-                Write-Host "       [!] Failed to get latest release for $extName" -ForegroundColor Red
+                Write-Host "       [!] Failed to get releases for $extName" -ForegroundColor Red
+                Write-Host "       Error: $($_.Exception.Message)" -ForegroundColor Gray
                 Write-Host "       Please download manually from: https://github.com/$extRepo/releases" -ForegroundColor Yellow
             }
         }
@@ -531,9 +528,9 @@ Write-Host "[+] Creating launcher script..." -ForegroundColor Cyan
 
 if ($Development) {
     $activateCmd = Join-Path (Join-Path $InstallDir "venv_qpsc") "Scripts\Activate.ps1"
-    $pythonCmd = "& '$activateCmd'; python -m microscope_server.server.qp_server"
+    $pythonCmd = "& '$activateCmd'; python -m microscope_command_server.server.qp_server"
 } else {
-    $pythonCmd = "python -m microscope_server.server.qp_server"
+    $pythonCmd = "python -m microscope_command_server.server.qp_server"
 }
 
 $launcherScript = @"
@@ -576,29 +573,6 @@ if (-not `$packagesOK) {
 Write-Host "    All packages verified" -ForegroundColor Green
 Write-Host ""
 
-# Test if OpenCV (cv2) can be imported
-Write-Host "[+] Testing OpenCV import (required for autofocus)..." -ForegroundColor Cyan
-`$opencvTest = & `$venvPython -c "import cv2; print('OK')" 2>&1
-if (`$LASTEXITCODE -ne 0) {
-    Write-Host "    [FAIL] Cannot import OpenCV (cv2)" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Error details:" -ForegroundColor Yellow
-    Write-Host `$opencvTest -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "    Autofocus features will not work without OpenCV." -ForegroundColor Yellow
-    Write-Host "    To fix this issue:" -ForegroundColor Yellow
-    Write-Host "      1. Install Visual C++ Redistributables: https://aka.ms/vs/17/release/vc_redist.x64.exe" -ForegroundColor White
-    Write-Host "      2. Or manually install opencv via conda: conda install -c conda-forge opencv -y --prefix $InstallDir\venv_qpsc" -ForegroundColor White
-    Write-Host ""
-    `$continue = Read-Host "Continue anyway? (y/N)"
-    if (`$continue -ne 'y' -and `$continue -ne 'Y') {
-        exit 1
-    }
-} else {
-    Write-Host "    OpenCV import successful" -ForegroundColor Green
-}
-Write-Host ""
-
 # Test if Python can import the server module
 Write-Host "[+] Testing server module import..." -ForegroundColor Cyan
 `$importTest = & `$venvPython -c "import microscope_command_server.server.qp_server; print('OK')" 2>&1
@@ -622,7 +596,7 @@ Write-Host ""
 # Start microscope server in background
 Write-Host "[+] Starting microscope server..." -ForegroundColor Green
 `$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
-Start-Process -NoNewWindow -FilePath `$venvPython -ArgumentList "-m", "microscope_command_server.server.qp_server"
+Start-Process -NoNewWindow -FilePath `$venvPython -ArgumentList "-m", "microscope_server.server.qp_server"
 
 # Wait for server to initialize
 Start-Sleep -Seconds 3
@@ -695,9 +669,9 @@ Python Virtual Environment:
       source $venvPath/bin/activate
 
 Python Packages (Editable Install):
-  ppm-library:                 $InstallDir\ppm_library
-  microscope-control:          $InstallDir\microscope_control
-  microscope-command-server:   $InstallDir\microscope_command_server
+  ppm-library:               $InstallDir\ppm_library
+  microscope-control:        $InstallDir\microscope_control
+  microscope-command-server:         $InstallDir\microscope_command_server
 
 Configuration Repository:
   $InstallDir\microscope_configurations
@@ -791,13 +765,13 @@ $summaryContent += @"
 if ($Development) {
     $summaryContent += @"
    # With venv activated:
-   python -c "import microscope_server; print('OK:', microscope_server.__file__)"
+   python -c "import microscope_command_server; print('OK:', microscope_server.__file__)"
    python -c "import microscope_control; print('OK:', microscope_control.__file__)"
    python -c "import ppm; print('OK:', ppm.__file__)"
 "@
 } else {
     $summaryContent += @"
-   python -c "import microscope_server; print('OK:', microscope_server.__file__)"
+   python -c "import microscope_command_server; print('OK:', microscope_server.__file__)"
    python -c "import microscope_control; print('OK:', microscope_control.__file__)"
    python -c "import ppm; print('OK:', ppm.__file__)"
 "@
@@ -832,7 +806,7 @@ if ($Development) {
 "@
 } else {
     $summaryContent += @"
-[+] Python Packages (from GitHub):
+[+] Python Packages (from GitHub releases):
     - ppm-library
     - microscope-control
     - microscope-command-server
@@ -907,7 +881,7 @@ If packages are not found:
 $summaryContent += @"
   - Make sure to use venv Python: $venvPath\Scripts\python.exe
   - Check packages: $venvPath\Scripts\pip.exe list
-  - Test import: $venvPath\Scripts\python.exe -c "import microscope_server"
+  - Test import: $venvPath\Scripts\python.exe -c "import microscope_command_server"
 "@
 
 $summaryContent += @"
@@ -1000,7 +974,7 @@ Write-Host "  To verify packages:" -ForegroundColor White
 Write-Host "    $venvPath\Scripts\pip.exe list | Select-String ""microscope|ppm""" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  To test import:" -ForegroundColor White
-Write-Host "    $venvPath\Scripts\python.exe -c ""import microscope_server; print('OK')""" -ForegroundColor Yellow
+Write-Host "    $venvPath\Scripts\python.exe -c ""import microscope_command_server; print('OK')""" -ForegroundColor Yellow
 
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan
@@ -1034,8 +1008,8 @@ Write-Host "         .\PPM-QuPath.ps1 -QuPathDir ""D:\YourPath\QuPath-0.6.0""" -
 if (-not $Development) {
     Write-Host ""
     Write-Host "  Or manually:" -ForegroundColor White
-    Write-Host "     $InstallDir\venv_qpsc\Scripts\python.exe -m microscope_command_server.server.qp_server  # Start server" -ForegroundColor Yellow
-    Write-Host "     QuPath.exe                                                                              # Start QuPath" -ForegroundColor Yellow
+    Write-Host "     python -m microscope_command_server.server.qp_server  # Start server" -ForegroundColor Yellow
+    Write-Host "     QuPath.exe                                    # Start QuPath" -ForegroundColor Yellow
 }
 
 Write-Host ""
