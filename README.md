@@ -251,17 +251,22 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-
 
 **Quick verification commands:**
 
-For production installation (system-wide Python):
+All installations use a virtual environment located at `C:\Users\YourUsername\QPSC\venv_qpsc\`
+
 ```powershell
+# Activate the virtual environment
+C:\Users\YourUsername\QPSC\venv_qpsc\Scripts\Activate.ps1
+
+# Check installed packages
 pip list | Select-String "microscope|ppm"
-python -c "import microscope_server; print('OK:', microscope_server.__file__)"
+
+# Test import
+python -c "import microscope_command_server; print('Import OK')"
 ```
 
-For development installation (virtual environment):
+**Or use the venv Python directly without activation:**
 ```powershell
-C:\Users\YourUsername\QPSC\venv_qpsc\Scripts\Activate.ps1
-pip list | Select-String "microscope|ppm"
-python -c "import microscope_server; print('OK:', microscope_server.__file__)"
+C:\Users\YourUsername\QPSC\venv_qpsc\Scripts\python.exe -c "import microscope_command_server; print('Import OK')"
 ```
 
 Open the `INSTALLATION_SUMMARY.txt` file to see all available verification commands and troubleshooting steps!
@@ -593,7 +598,7 @@ Common locations:
 
 #### Problem: `ModuleNotFoundError` when importing packages
 
-**Cause:** Python packages installed incorrectly due to repository structure mismatch.
+**Cause:** Packages not installed or installation failed.
 
 **Symptoms:**
 ```python
@@ -601,58 +606,35 @@ Common locations:
 ModuleNotFoundError: No module named 'ppm_library'
 ```
 
-**Solution for editable installs (development mode):**
+**Solution:**
 
-The packages have a known packaging structure issue that has been fixed in the latest development versions. The repository directories are named differently from the Python package names they contain.
-
-1. **Verify pyproject.toml files are updated:**
-
-   Each repository's `pyproject.toml` should have:
-   ```toml
-   [tool.hatch.build.targets.wheel]
-   packages = ["."]
-   ```
-
-   If you see `packages = ["package_name"]` instead, update it to `packages = ["."]`
-
-2. **Create symlink for microscope_server:**
-
-   The `microscope_command_server` repository contains code that imports `microscope_server`:
-
-   **Windows (Command Prompt as Administrator):**
-   ```cmd
-   mklink /D microscope_server microscope_command_server
-   ```
-
-   **macOS/Linux:**
-   ```bash
-   ln -s microscope_command_server microscope_server
-   ```
-
-3. **Reinstall packages with updated configuration:**
-   ```bash
-   cd ppm_library
-   pip install -e . --force-reinstall --no-deps
-   cd ../microscope_control
-   pip install -e . --force-reinstall --no-deps
-   cd ../microscope_command_server
-   pip install -e . --force-reinstall --no-deps
-   ```
-
-4. **Verify with PYTHONPATH (if imports still fail):**
-
-   Set PYTHONPATH to include the parent directory:
-
-   **Windows PowerShell:**
+1. **Verify packages are installed:**
    ```powershell
-   $env:PYTHONPATH = "C:\path\to\parent\directory"
-   microscope-command-server
+   # Activate venv (if using one)
+   C:\Users\YourUsername\QPSC\venv_qpsc\Scripts\Activate.ps1
+
+   # Check installed packages
+   pip list | Select-String "microscope|ppm"
    ```
 
-   **macOS/Linux:**
+2. **If packages are missing, reinstall in dependency order:**
+   ```powershell
+   pip install git+https://github.com/uw-loci/ppm_library.git
+   pip install git+https://github.com/uw-loci/microscope_control.git
+   pip install git+https://github.com/uw-loci/microscope_command_server.git
+   ```
+
+3. **For development installations (editable mode):**
    ```bash
-   export PYTHONPATH="/path/to/parent/directory:$PYTHONPATH"
-   microscope-command-server
+   cd /path/to/repositories
+   pip install -e ppm_library/
+   pip install -e microscope_control/
+   pip install -e microscope_command_server/
+   ```
+
+4. **Test imports:**
+   ```python
+   python -c "import ppm_library, microscope_control, microscope_command_server; print('All imports OK')"
    ```
 
 #### Problem: `UnicodeEncodeError` in server logs
@@ -751,7 +733,7 @@ After installation, verify everything works:
 
 #### 1. Test Python Package Imports
 ```python
-python -c "import ppm_library, microscope_control; from microscope_server.server import qp_server; print('✓ All packages imported successfully')"
+python -c "import ppm_library, microscope_control, microscope_command_server; print('All packages imported successfully')"
 ```
 
 #### 2. Test Server Startup
