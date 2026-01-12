@@ -578,20 +578,20 @@ Write-Host ""
 
 # Test if OpenCV (cv2) can be imported
 Write-Host "[+] Testing OpenCV import (required for autofocus)..." -ForegroundColor Cyan
-$opencvTest = & $venvPython -c "import cv2; print('OK')" 2>&1
-if ($LASTEXITCODE -ne 0) {
+`$opencvTest = & `$venvPython -c "import cv2; print('OK')" 2>&1
+if (`$LASTEXITCODE -ne 0) {
     Write-Host "    [FAIL] Cannot import OpenCV (cv2)" -ForegroundColor Red
     Write-Host ""
     Write-Host "Error details:" -ForegroundColor Yellow
-    Write-Host $opencvTest -ForegroundColor Gray
+    Write-Host `$opencvTest -ForegroundColor Gray
     Write-Host ""
     Write-Host "    Autofocus features will not work without OpenCV." -ForegroundColor Yellow
     Write-Host "    To fix this issue:" -ForegroundColor Yellow
     Write-Host "      1. Install Visual C++ Redistributables: https://aka.ms/vs/17/release/vc_redist.x64.exe" -ForegroundColor White
-    Write-Host "      2. Or manually install opencv via conda: conda install -c conda-forge opencv -y --prefix $venvPath" -ForegroundColor White
+    Write-Host "      2. Or manually install opencv via conda: conda install -c conda-forge opencv -y --prefix $InstallDir\venv_qpsc" -ForegroundColor White
     Write-Host ""
-    $continue = Read-Host "Continue anyway? (y/N)"
-    if ($continue -ne 'y' -and $continue -ne 'Y') {
+    `$continue = Read-Host "Continue anyway? (y/N)"
+    if (`$continue -ne 'y' -and `$continue -ne 'Y') {
         exit 1
     }
 } else {
