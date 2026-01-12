@@ -165,7 +165,17 @@ Install these foundational components **in this order** before QPSC installation
 - **Installation**: [Python Download](https://www.python.org/downloads/)
 - **Windows Note**: Check "Add Python to PATH" during installation
 
-#### 4. Java Development Kit (For Extension Development Only)
+#### 4. Windows Media Feature Pack (Windows N/KN Editions Only)
+- **Required for**: Windows N or KN editions (Education N, Pro N, etc.)
+- **Purpose**: Provides media codecs required by OpenCV (autofocus functionality)
+- **Symptom without it**: `ImportError: DLL load failed while importing cv2`
+- **Installation**: [Media Feature Pack Download](https://support.microsoft.com/en-us/topic/media-feature-pack-list-for-windows-n-editions-c1c6fffa-d052-8338-7a79-a4bb980a700a)
+- **Check if you need this**:
+  - Open Settings → System → About
+  - If "Edition" shows "Windows 10/11 Education N" or "Pro N", you need the Media Feature Pack
+- **Note**: Standard Windows editions (Home, Pro, Education) already include these components
+
+#### 5. Java Development Kit (For Extension Development Only)
 - **Version**: Java 21+
 - **Purpose**: Building QuPath extensions from source
 - **Note**: Not required for using QPSC, only for modifying extension code
@@ -667,7 +677,11 @@ The codebase now uses ASCII-only characters in all logging and internal strings.
 from microscope_control.autofocus.tissue_detection import EmptyRegionDetector
 ```
 
-#### Problem: Missing OpenCV (cv2) dependency
+#### Problem: OpenCV (cv2) import errors
+
+QPSC requires OpenCV for autofocus functionality. There are two common OpenCV issues:
+
+**Issue 1: OpenCV not installed**
 
 **Symptoms:**
 ```
@@ -679,7 +693,35 @@ ModuleNotFoundError: No module named 'cv2'
 pip install opencv-python
 ```
 
-This dependency will be added to `microscope_control` requirements in a future update.
+**Issue 2: OpenCV DLL loading error on Windows N editions**
+
+**Symptoms:**
+```
+ImportError: DLL load failed while importing cv2: The specified module could not be found.
+```
+
+**Cause:** Windows N editions (Education N, Pro N, Home N) do not include media components required by OpenCV.
+
+**Solution:**
+
+1. **Check your Windows edition:**
+   - Open Settings → System → About
+   - Look at "Edition" - if it ends with "N" (e.g., "Windows 10 Education N"), you need the Media Feature Pack
+
+2. **Install Media Feature Pack:**
+   - Download from: [Media Feature Pack for Windows N editions](https://support.microsoft.com/en-us/topic/media-feature-pack-list-for-windows-n-editions-c1c6fffa-d052-8338-7a79-a4bb980a700a)
+   - Follow Microsoft's installation instructions
+   - Restart your computer after installation
+
+3. **Verify OpenCV works:**
+   ```powershell
+   python -c "import cv2; print('OpenCV version:', cv2.__version__)"
+   ```
+
+**Note:** If you're using conda-based Python, you can alternatively install opencv via conda which bundles all necessary DLLs:
+```bash
+conda install -c conda-forge opencv
+```
 
 #### Problem: Port 5000 already in use
 
