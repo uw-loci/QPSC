@@ -986,8 +986,8 @@ Write-Host "         .\PPM-QuPath.ps1 -QuPathDir ""D:\YourPath\QuPath-0.6.0""" -
 if (-not $Development) {
     Write-Host ""
     Write-Host "  Or manually:" -ForegroundColor White
-    Write-Host "     python -m microscope_server.server.qp_server  # Start server" -ForegroundColor Yellow
-    Write-Host "     QuPath.exe                                    # Start QuPath" -ForegroundColor Yellow
+    Write-Host "     $InstallDir\venv_qpsc\Scripts\python.exe -m microscope_command_server.server.qp_server  # Start server" -ForegroundColor Yellow
+    Write-Host "     QuPath.exe                                                                              # Start QuPath" -ForegroundColor Yellow
 }
 
 Write-Host ""
