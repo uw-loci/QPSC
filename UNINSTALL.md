@@ -13,17 +13,11 @@ cd $env:USERPROFILE
 Then run each command:
 
 ```powershell
-pip uninstall -y microscope-server microscope-control ppm-library pycromanager
+pip uninstall -y microscope-command-server microscope-control ppm-library pycromanager
 ```
 
 ```powershell
 Remove-Item -Recurse -Force "$env:USERPROFILE\QPSC"
-```
-
-For development installations with virtual environment:
-
-```powershell
-Remove-Item -Recurse -Force "$env:USERPROFILE\QPSC\venv_qpsc"
 ```
 
 ---
@@ -35,7 +29,7 @@ Remove-Item -Recurse -Force "$env:USERPROFILE\QPSC\venv_qpsc"
 Remove the QPSC Python packages from pip:
 
 ```powershell
-pip uninstall microscope-server
+pip uninstall microscope-command-server
 ```
 
 ```powershell
@@ -153,7 +147,7 @@ After uninstalling, you can perform a fresh installation by following the [Insta
 If you want to update the Python packages but keep your configuration files:
 
 ```powershell
-pip uninstall -y microscope-server microscope-control ppm-library
+pip uninstall -y microscope-command-server microscope-control ppm-library
 ```
 
 Then reinstall with the setup script, which will preserve existing configuration files.
@@ -186,7 +180,7 @@ If you get access denied errors when removing directories:
 If `pip uninstall` fails:
 
 ```powershell
-pip uninstall --break-system-packages microscope-server
+pip uninstall --break-system-packages microscope-command-server
 ```
 
 (This flag may be needed on some Python installations)

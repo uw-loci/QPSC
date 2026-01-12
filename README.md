@@ -420,14 +420,14 @@ cd ..
 
 **Verify installation:**
 ```bash
-pip list | grep -E "(ppm-library|microscope-control|microscope-server)"
+pip list | grep -E "(ppm-library|microscope-control|microscope-command-server)"
 ```
 
 Expected output:
 ```
-microscope-control    1.0.0    /path/to/microscope_control
-microscope-server     1.0.0    /path/to/microscope_command_server
-ppm-library           1.0.0    /path/to/ppm_library
+microscope-command-server    1.0.0    /path/to/microscope_command_server
+microscope-control           1.0.0    /path/to/microscope_control
+ppm-library                  1.0.0    /path/to/ppm_library
 ```
 
 **Troubleshooting:** See [Python Package Installation Troubleshooting](#troubleshooting-python-package-installation) below.
@@ -501,7 +501,7 @@ Ensure Micro-Manager is running before starting the server.
 source qpsc-env/bin/activate
 
 # Start server
-microscope-server
+microscope-command-server
 ```
 
 **Expected output:**
@@ -636,13 +636,13 @@ The packages have a known packaging structure issue that has been fixed in the l
    **Windows PowerShell:**
    ```powershell
    $env:PYTHONPATH = "C:\path\to\parent\directory"
-   microscope-server
+   microscope-command-server
    ```
 
    **macOS/Linux:**
    ```bash
    export PYTHONPATH="/path/to/parent/directory:$PYTHONPATH"
-   microscope-server
+   microscope-command-server
    ```
 
 #### Problem: `UnicodeEncodeError` in server logs
@@ -716,7 +716,7 @@ python -c "import ppm_library, microscope_control; from microscope_server.server
 ```bash
 # Start Micro-Manager first
 # Then start server
-microscope-server
+microscope-command-server
 ```
 
 Expected: Server should start and show "Server listening on 0.0.0.0:5000"
@@ -840,7 +840,7 @@ QuPath Extensions:
 └── qupath-extension-tiles-to-pyramid/  # Image stitching
 
 Python Microscope Control (pip-installable packages):
-├── microscope_command_server/       # Package: microscope-server
+├── microscope_command_server/       # Package: microscope-command-server
 │   ├── server/
 │   │   ├── qp_server.py            # Socket server
 │   │   └── protocol.py             # Communication protocol

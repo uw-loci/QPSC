@@ -165,11 +165,11 @@ qupath/ext/qpsc/
 
 #### microscope_command_server
 
-**Package:** `microscope-server` (pip installable)
+**Package:** `microscope-command-server` (pip installable)
 
 **Package Structure:**
 ```
-microscope_server/
+microscope_command_server/
 ├── server/
 │   ├── qp_server.py      # TCP/IP socket server
 │   └── protocol.py       # Communication protocol
