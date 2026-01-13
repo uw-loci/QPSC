@@ -210,11 +210,13 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-
 
 **What this does:**
 - Creates a Python virtual environment
-- Installs Python packages from GitHub releases (latest stable versions)
-- Downloads QPSC QuPath extension JARs
-- Downloads Tiles-to-Pyramid extension JAR
+- Installs Python packages from GitHub (latest versions, including prereleases)
+- Installs OpenCV (required for autofocus)
+- Downloads QPSC and Tiles-to-Pyramid extension JARs (shadow JARs with bundled dependencies)
+- Stores extensions in local `QPSC\extensions\` folder for easy access
+- Automatically copies extensions to QuPath user data directory
 - Downloads configuration templates
-- Creates a launcher script for easy server startup
+- Creates a launcher script that opens server in visible window showing status
 
 **Default installation location:** `C:\Users\YourUsername\QPSC\`
 

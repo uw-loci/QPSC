@@ -24,10 +24,13 @@ Clones all repositories and installs in editable mode for code modification:
 
 ### Production Mode (Default)
 
-- ✅ Installs Python packages from GitHub in correct dependency order
-- ✅ Downloads QuPath extension JAR files (latest releases)
+- ✅ Installs Python packages from GitHub in correct dependency order (includes OpenCV)
+- ✅ Downloads QuPath extension JAR files (latest releases, including prereleases)
+- ✅ Stores JARs in local QPSC\extensions folder for easy access
+- ✅ Automatically copies JARs to QuPath user data extensions directory
 - ✅ Downloads configuration templates
 - ✅ Creates launcher script for easy startup
+- ✅ Launches server in visible window showing port and status
 - ✅ Checks for Micro-Manager and QuPath installation
 
 ### Development Mode (-Development flag)
@@ -115,9 +118,12 @@ Clones all repositories and installs in editable mode for code modification:
 
    Or manually:
    ```powershell
-   python -m microscope_server.server.qp_server  # Start server
-   QuPath.exe                                    # Start QuPath
+   python -m microscope_command_server.server.qp_server  # Start server
+   QuPath.exe                                            # Start QuPath
    ```
+
+   **Note:** The server opens in a separate window showing port number,
+   connection status, and error messages. Check this window if connection fails.
 
 ### Development Mode
 
@@ -133,7 +139,8 @@ Clones all repositories and installs in editable mode for code modification:
    ```
 
 3. **Copy built JAR files to QuPath extensions folder:**
-   - Copy `build/libs/*.jar` to `C:\Users\YourName\QuPath\extensions\`
+   - Copy `build/libs/*.jar` to `C:\Users\YourName\QuPath\vX.X\extensions\`
+   - Or copy to your custom QuPath extensions directory
 
 4. **Make code changes:**
    - Python: Changes take effect immediately (editable install)
@@ -189,6 +196,9 @@ Both modes require:
 
 ```
 C:\Users\YourName\QPSC\
+├── extensions\                  # ⭐ NEW: Extension JARs (easy access)
+│   ├── qupath-extension-qpsc-X.X.X-all.jar
+│   └── qupath-extension-tiles-to-pyramid-X.X.X-all.jar
 ├── configurations\              # Microscope configurations
 │   ├── config_template.yml
 │   ├── autofocus_template.yml
@@ -197,12 +207,14 @@ C:\Users\YourName\QPSC\
 │   ├── config_CAMM.yml
 │   └── resources\
 │       └── resources_LOCI.yml
+├── venv_qpsc\                   # Python virtual environment
 └── Launch-QPSC.ps1             # Launcher script
 
 C:\Users\YourName\QuPath\
-└── extensions\                  # QuPath extensions
-    ├── qupath-extension-qpsc-X.X.X.jar
-    └── qupath-extension-tiles-to-pyramid-X.X.X.jar
+└── v0.X\                        # Version-specific user data
+    └── extensions\              # QuPath extensions (auto-copied)
+        ├── qupath-extension-qpsc-X.X.X-all.jar
+        └── qupath-extension-tiles-to-pyramid-X.X.X-all.jar
 ```
 
 ### Development Mode
@@ -248,7 +260,30 @@ Manually download from:
 - https://github.com/uw-loci/qupath-extension-qpsc/releases
 - https://github.com/uw-loci/qupath-extension-tiles-to-pyramid/releases
 
-Place JAR files in: `C:\Users\YourName\QuPath\extensions\`
+**Choose the `-all.jar` files** (shadow JARs with bundled dependencies).
+
+Place JAR files in:
+1. First: `C:\Users\YourName\QPSC\extensions\` (for easy access)
+2. Then copy to: `C:\Users\YourName\QuPath\vX.X\extensions\` (replace X.X with your QuPath version)
+
+### QPSC menu not appearing in QuPath
+
+1. **Check extension location:**
+   - Extensions must be in QuPath **user data** directory, not installation directory
+   - Correct: `C:\Users\YourName\QuPath\v0.X\extensions\`
+   - Incorrect: `C:\AppData\Local\QuPath-X.X.X\extensions\`
+
+2. **Restart QuPath:**
+   - Extensions only load on startup
+   - If QuPath was running during installation, close and restart it
+
+3. **Check for custom extensions directory:**
+   - If you configured a custom directory in QuPath preferences:
+   - Copy JARs from `C:\Users\YourName\QPSC\extensions\` to your custom directory
+
+4. **Verify JARs downloaded:**
+   - Check `C:\Users\YourName\QPSC\extensions\` folder
+   - Should contain: `qupath-extension-qpsc-X.X.X-all.jar` and `qupath-extension-tiles-to-pyramid-X.X.X-all.jar`
 
 ### Python package installation fails
 
@@ -257,9 +292,38 @@ If you see `ERROR: Could not find a version that satisfies the requirement`, ens
 2. Git is installed (required for `pip install git+https://...`)
 3. Try installing packages manually in order:
    ```powershell
+   pip install opencv-python-headless
    pip install git+https://github.com/uw-loci/ppm_library.git
    pip install git+https://github.com/uw-loci/microscope_control.git
    pip install git+https://github.com/uw-loci/microscope_command_server.git
+   pip install pycromanager
+   ```
+
+### Server fails with "ModuleNotFoundError: No module named 'cv2'"
+
+OpenCV is missing (required for autofocus):
+```powershell
+pip install opencv-python-headless
+```
+
+Or if using virtual environment:
+```powershell
+C:\Users\YourName\QPSC\venv_qpsc\Scripts\pip.exe install opencv-python-headless
+```
+
+### Server output not visible
+
+The server should open in a **separate window** showing:
+- Port number (default: 5000)
+- Micro-Manager connection status
+- Configuration loading messages
+- Error messages
+
+If no window appears:
+1. Check Task Manager for `python.exe` processes
+2. Try running manually:
+   ```powershell
+   C:\Users\YourName\QPSC\venv_qpsc\Scripts\python.exe -m microscope_command_server.server.qp_server
    ```
 
 ## Links
