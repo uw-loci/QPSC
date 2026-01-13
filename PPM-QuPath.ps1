@@ -422,26 +422,29 @@ if (-not $SkipQuPath) {
             Write-Host ""
             Write-Host "[+] Downloading QuPath extensions..." -ForegroundColor Cyan
 
-            # QuPath loads user extensions from the user data directory, not the installation directory
-            # Look for existing QuPath user data directory (e.g., C:\Users\<user>\QuPath\v0.6)
+            # Download JARs to local QPSC extensions folder (always accessible to user)
+            $localExtensionsDir = Join-Path $InstallDir "extensions"
+            if (-not (Test-Path $localExtensionsDir)) {
+                Write-Host "    Creating local extensions directory: $localExtensionsDir" -ForegroundColor Cyan
+                New-Item -ItemType Directory -Path $localExtensionsDir -Force | Out-Null
+            }
+            Write-Host "    Downloading to: $localExtensionsDir" -ForegroundColor Cyan
+
+            # Also determine QuPath user data directory for automatic installation
             $quPathUserDataDir = Get-ChildItem -Path "$env:USERPROFILE\QuPath\v*" -Directory -ErrorAction SilentlyContinue |
                 Sort-Object Name -Descending |
                 Select-Object -First 1
 
+            $quPathExtensionsDir = $null
             if ($quPathUserDataDir) {
-                $extensionsDir = Join-Path $quPathUserDataDir.FullName "extensions"
-                Write-Host "    Using QuPath user data directory: $($quPathUserDataDir.FullName)" -ForegroundColor Cyan
+                $quPathExtensionsDir = Join-Path $quPathUserDataDir.FullName "extensions"
+                Write-Host "    Will also copy to QuPath: $quPathExtensionsDir" -ForegroundColor Cyan
+                if (-not (Test-Path $quPathExtensionsDir)) {
+                    New-Item -ItemType Directory -Path $quPathExtensionsDir -Force | Out-Null
+                }
             } else {
-                # If no user data directory exists yet, QuPath will create it on first launch
-                # Default to the most common location for QuPath 0.6+
-                $extensionsDir = "$env:USERPROFILE\QuPath\extensions"
-                Write-Host "    QuPath user data directory not found - will use default location" -ForegroundColor Yellow
-                Write-Host "    Note: Launch QuPath once to create the user data directory" -ForegroundColor Yellow
-            }
-
-            if (-not (Test-Path $extensionsDir)) {
-                Write-Host "    Creating extensions directory: $extensionsDir" -ForegroundColor Yellow
-                New-Item -ItemType Directory -Path $extensionsDir -Force | Out-Null
+                Write-Host "    QuPath user data directory not found - JARs will remain in local folder" -ForegroundColor Yellow
+                Write-Host "    You can manually copy them to QuPath after first launch" -ForegroundColor Yellow
             }
 
         # Extension repositories and their latest release URLs
@@ -488,16 +491,28 @@ if (-not $SkipQuPath) {
                 if ($jarAsset) {
                     $jarName = $jarAsset.name
                     $jarUrl = $jarAsset.browser_download_url
-                    $jarDest = Join-Path $extensionsDir $jarName
+                    $localJarPath = Join-Path $localExtensionsDir $jarName
 
-                    if (Test-Path $jarDest) {
-                        Write-Host "       Already installed: $jarName" -ForegroundColor Green
-                        Write-Host "       Location: $jarDest" -ForegroundColor Gray
+                    # Download to local QPSC extensions folder
+                    if (Test-Path $localJarPath) {
+                        Write-Host "       Already downloaded: $jarName" -ForegroundColor Green
                     } else {
                         Write-Host "       Downloading: $jarName" -ForegroundColor Cyan
-                        Invoke-WebRequest -Uri $jarUrl -OutFile $jarDest
-                        Write-Host "       Installed: $jarName" -ForegroundColor Green
-                        Write-Host "       Location: $jarDest" -ForegroundColor Gray
+                        Invoke-WebRequest -Uri $jarUrl -OutFile $localJarPath
+                        Write-Host "       Downloaded: $jarName" -ForegroundColor Green
+                    }
+                    Write-Host "       Local location: $localJarPath" -ForegroundColor Gray
+
+                    # Also copy to QuPath extensions directory if found
+                    if ($quPathExtensionsDir) {
+                        $quPathJarPath = Join-Path $quPathExtensionsDir $jarName
+                        if (Test-Path $quPathJarPath) {
+                            Write-Host "       Already in QuPath: $jarName" -ForegroundColor Green
+                        } else {
+                            Copy-Item -Path $localJarPath -Destination $quPathJarPath -Force
+                            Write-Host "       Copied to QuPath: $jarName" -ForegroundColor Green
+                        }
+                        Write-Host "       QuPath location: $quPathJarPath" -ForegroundColor Gray
                     }
                 } else {
                     Write-Host "       [!] No JAR file found in release $releaseTag" -ForegroundColor Yellow
@@ -510,16 +525,27 @@ if (-not $SkipQuPath) {
         }
 
         Write-Host ""
-        Write-Host "[+] QuPath extensions installation complete" -ForegroundColor Green
-        Write-Host "    Extensions installed to: $extensionsDir" -ForegroundColor Cyan
+        Write-Host "[+] QuPath extensions download complete" -ForegroundColor Green
+        Write-Host "    Downloaded to: $localExtensionsDir" -ForegroundColor Cyan
+        if ($quPathExtensionsDir) {
+            Write-Host "    Copied to QuPath: $quPathExtensionsDir" -ForegroundColor Cyan
+        }
         Write-Host ""
         Write-Host "    IMPORTANT:" -ForegroundColor Yellow
-        Write-Host "    1. If you have configured a custom extensions directory in QuPath," -ForegroundColor Yellow
-        Write-Host "       you must manually copy the JAR files from:" -ForegroundColor Yellow
-        Write-Host "       $extensionsDir" -ForegroundColor Gray
-        Write-Host "       to your custom extensions directory." -ForegroundColor Yellow
+        if (-not $quPathExtensionsDir) {
+            Write-Host "    1. QuPath user data directory not found." -ForegroundColor Yellow
+            Write-Host "       Launch QuPath once, then manually copy JAR files from:" -ForegroundColor Yellow
+            Write-Host "       $localExtensionsDir" -ForegroundColor Gray
+            Write-Host "       to your QuPath extensions directory." -ForegroundColor Yellow
+            Write-Host ""
+        }
+        Write-Host "    1. JAR files are stored in your QPSC installation for easy access:" -ForegroundColor Yellow
+        Write-Host "       $localExtensionsDir" -ForegroundColor Gray
         Write-Host ""
-        Write-Host "    2. If QuPath is already running, restart it to load the extensions!" -ForegroundColor Yellow
+        Write-Host "    2. If you have configured a custom extensions directory in QuPath," -ForegroundColor Yellow
+        Write-Host "       manually copy the JAR files from the location above." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "    3. If QuPath is already running, restart it to load the extensions!" -ForegroundColor Yellow
         Write-Host "       Otherwise, the QPSC menu will not appear." -ForegroundColor Yellow
 
         } else {
@@ -758,25 +784,36 @@ Launcher Script:
 
 if ($quPathExe) {
     # Get the actual extensions directory (user data directory, not installation directory)
+    $localExtDir = Join-Path $InstallDir "extensions"
     $quPathUserDataDir = Get-ChildItem -Path "$env:USERPROFILE\QuPath\v*" -Directory -ErrorAction SilentlyContinue |
         Sort-Object Name -Descending |
         Select-Object -First 1
 
     if ($quPathUserDataDir) {
-        $extensionsDir = Join-Path $quPathUserDataDir.FullName "extensions"
+        $quPathExtDir = Join-Path $quPathUserDataDir.FullName "extensions"
     } else {
-        $extensionsDir = "$env:USERPROFILE\QuPath\extensions"
+        $quPathExtDir = "$env:USERPROFILE\QuPath\extensions"
     }
 
     $summaryContent += @"
 QuPath Installation:
   $quPathExe
 
-QuPath Extensions Directory (user data):
-  $extensionsDir
+Extension JAR Files:
+  Local QPSC folder (always accessible):
+    $localExtDir
 
-  NOTE: If QuPath was already running when extensions were installed,
+  QuPath user data directory:
+    $quPathExtDir
+
+  NOTE: JAR files are downloaded to your QPSC installation folder first,
+        then automatically copied to QuPath's extensions directory.
+
+        If QuPath was already running when extensions were installed,
         you must restart QuPath for the QPSC menu to appear.
+
+        If you use a custom extensions directory in QuPath, manually
+        copy the JARs from the local QPSC folder.
 
 "@
 } else {
