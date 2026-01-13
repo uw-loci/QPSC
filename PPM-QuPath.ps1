@@ -149,6 +149,7 @@ if ($Development) {
 
     # Install from GitHub URLs in dependency order
     $githubPackages = @(
+        @{name="opencv-python-headless"; url="opencv-python-headless"},
         @{name="ppm-library"; url="git+https://github.com/uw-loci/ppm_library.git"},
         @{name="microscope-control"; url="git+https://github.com/uw-loci/microscope_control.git"},
         @{name="microscope-command-server"; url="git+https://github.com/uw-loci/microscope_command_server.git"},
@@ -182,7 +183,7 @@ if ($Development) {
 Write-Host ""
 Write-Host "[+] Verifying package installation..." -ForegroundColor Cyan
 
-$packagesToVerify = @("microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
+$packagesToVerify = @("opencv-python-headless", "microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
 $allPackagesInstalled = $true
 
 # Both Development and Production modes now use venv
@@ -548,7 +549,7 @@ Write-Host "[+] Verifying Python packages..." -ForegroundColor Cyan
 `$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
 
 `$packagesOK = `$true
-`$requiredPackages = @("microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
+`$requiredPackages = @("opencv-python-headless", "microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
 
 foreach (`$pkg in `$requiredPackages) {
     `$result = & `$venvPip show `$pkg 2>`$null
