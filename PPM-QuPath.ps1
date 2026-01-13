@@ -422,7 +422,23 @@ if (-not $SkipQuPath) {
             Write-Host ""
             Write-Host "[+] Downloading QuPath extensions..." -ForegroundColor Cyan
 
-            $extensionsDir = Join-Path $QuPathDir "extensions"
+            # QuPath loads user extensions from the user data directory, not the installation directory
+            # Look for existing QuPath user data directory (e.g., C:\Users\<user>\QuPath\v0.6)
+            $quPathUserDataDir = Get-ChildItem -Path "$env:USERPROFILE\QuPath\v*" -Directory -ErrorAction SilentlyContinue |
+                Sort-Object Name -Descending |
+                Select-Object -First 1
+
+            if ($quPathUserDataDir) {
+                $extensionsDir = Join-Path $quPathUserDataDir.FullName "extensions"
+                Write-Host "    Using QuPath user data directory: $($quPathUserDataDir.FullName)" -ForegroundColor Cyan
+            } else {
+                # If no user data directory exists yet, QuPath will create it on first launch
+                # Default to the most common location for QuPath 0.6+
+                $extensionsDir = "$env:USERPROFILE\QuPath\extensions"
+                Write-Host "    QuPath user data directory not found - will use default location" -ForegroundColor Yellow
+                Write-Host "    Note: Launch QuPath once to create the user data directory" -ForegroundColor Yellow
+            }
+
             if (-not (Test-Path $extensionsDir)) {
                 Write-Host "    Creating extensions directory: $extensionsDir" -ForegroundColor Yellow
                 New-Item -ItemType Directory -Path $extensionsDir -Force | Out-Null
@@ -476,10 +492,12 @@ if (-not $SkipQuPath) {
 
                     if (Test-Path $jarDest) {
                         Write-Host "       Already installed: $jarName" -ForegroundColor Green
+                        Write-Host "       Location: $jarDest" -ForegroundColor Gray
                     } else {
                         Write-Host "       Downloading: $jarName" -ForegroundColor Cyan
                         Invoke-WebRequest -Uri $jarUrl -OutFile $jarDest
                         Write-Host "       Installed: $jarName" -ForegroundColor Green
+                        Write-Host "       Location: $jarDest" -ForegroundColor Gray
                     }
                 } else {
                     Write-Host "       [!] No JAR file found in release $releaseTag" -ForegroundColor Yellow
@@ -490,6 +508,20 @@ if (-not $SkipQuPath) {
                 Write-Host "       Please download manually from: https://github.com/$extRepo/releases" -ForegroundColor Yellow
             }
         }
+
+        Write-Host ""
+        Write-Host "[+] QuPath extensions installation complete" -ForegroundColor Green
+        Write-Host "    Extensions installed to: $extensionsDir" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "    IMPORTANT:" -ForegroundColor Yellow
+        Write-Host "    1. If you have configured a custom extensions directory in QuPath," -ForegroundColor Yellow
+        Write-Host "       you must manually copy the JAR files from:" -ForegroundColor Yellow
+        Write-Host "       $extensionsDir" -ForegroundColor Gray
+        Write-Host "       to your custom extensions directory." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "    2. If QuPath is already running, restart it to load the extensions!" -ForegroundColor Yellow
+        Write-Host "       Otherwise, the QPSC menu will not appear." -ForegroundColor Yellow
+
         } else {
             Write-Host ""
             Write-Host "    [!] Skipping QuPath extensions download - QuPath not found" -ForegroundColor Yellow
@@ -594,12 +626,17 @@ if (`$LASTEXITCODE -ne 0) {
 
 Write-Host ""
 
-# Start microscope server in background
+# Start microscope server in new window
 Write-Host "[+] Starting microscope server..." -ForegroundColor Green
+Write-Host "    The server will open in a new window showing its output" -ForegroundColor Cyan
+Write-Host ""
 `$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
-Start-Process -NoNewWindow -FilePath `$venvPython -ArgumentList "-m", "microscope_server.server.qp_server"
+
+# Start server in new window so user can see output (port, errors, status)
+Start-Process -FilePath `$venvPython -ArgumentList "-m", "microscope_command_server.server.qp_server"
 
 # Wait for server to initialize
+Write-Host "Waiting for server to start..."
 Start-Sleep -Seconds 3
 
 # Launch QuPath if requested
@@ -618,12 +655,17 @@ if (`$args -contains "--qupath") {
 
 Write-Host ""
 Write-Host "QPSC System Started" -ForegroundColor Green
-Write-Host "  - Microscope server is running" -ForegroundColor White
-Write-Host "  - Press Ctrl+C to stop the server" -ForegroundColor White
+Write-Host "  - Microscope server is running in separate window" -ForegroundColor White
+Write-Host "  - Check the server window for:" -ForegroundColor White
+Write-Host "    * Port number (default: 5000)" -ForegroundColor Gray
+Write-Host "    * Connection status" -ForegroundColor Gray
+Write-Host "    * Error messages (if any)" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  - To stop the server: Close the server window or press Ctrl+C in that window" -ForegroundColor White
 Write-Host ""
 
 # Keep script running
-Read-Host "Press Enter to stop the microscope server"
+Read-Host "Press Enter to exit launcher (server will continue running)"
 "@
 
 $launcherPath = Join-Path $InstallDir "Launch-QPSC.ps1"
@@ -715,13 +757,26 @@ Launcher Script:
 "@
 
 if ($quPathExe) {
-    $extensionsDir = Join-Path $QuPathDir "extensions"
+    # Get the actual extensions directory (user data directory, not installation directory)
+    $quPathUserDataDir = Get-ChildItem -Path "$env:USERPROFILE\QuPath\v*" -Directory -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        Select-Object -First 1
+
+    if ($quPathUserDataDir) {
+        $extensionsDir = Join-Path $quPathUserDataDir.FullName "extensions"
+    } else {
+        $extensionsDir = "$env:USERPROFILE\QuPath\extensions"
+    }
+
     $summaryContent += @"
 QuPath Installation:
   $quPathExe
 
-QuPath Extensions Directory:
+QuPath Extensions Directory (user data):
   $extensionsDir
+
+  NOTE: If QuPath was already running when extensions were installed,
+        you must restart QuPath for the QPSC menu to appear.
 
 "@
 } else {
