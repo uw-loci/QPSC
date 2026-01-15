@@ -132,21 +132,32 @@ Clones all repositories and installs in editable mode for code modification:
    C:\QPSC\venv_qpsc\Scripts\Activate.ps1
    ```
 
-2. **Build QuPath extensions:**
+2. **Run the microscope server manually:**
+   ```powershell
+   # Option 1: Use the entry point command (NOTE: uses hyphens, not underscores)
+   microscope-command-server
+
+   # Option 2: Run as Python module
+   python -m microscope_command_server.server.qp_server
+   ```
+
+   The server runs on port 5000 by default and waits for QuPath connections.
+
+3. **Build QuPath extensions (if developing Java code):**
    ```powershell
    cd C:\QPSC\qupath-extension-qpsc
    .\gradlew build
    ```
 
-3. **Copy built JAR files to QuPath extensions folder:**
+4. **Copy built JAR files to QuPath extensions folder:**
    - Copy `build/libs/*.jar` to `C:\Users\YourName\QuPath\vX.X\extensions\`
    - Or copy to your custom QuPath extensions directory
 
-4. **Make code changes:**
+5. **Make code changes:**
    - Python: Changes take effect immediately (editable install)
    - Java: Rebuild with `.\gradlew build` after changes
 
-5. **Run tests:**
+6. **Run tests:**
    ```powershell
    # Java
    cd qupath-extension-qpsc
@@ -155,6 +166,21 @@ Clones all repositories and installs in editable mode for code modification:
    # Python (with venv activated)
    pytest microscope_control/
    ```
+
+### Running the Server Without the Launcher Script
+
+If you're running QuPath from an IDE (development mode), you only need to start the server manually:
+
+```powershell
+# 1. Activate virtual environment
+D:\python_microscope_server\venv_qpsc\Scripts\Activate.ps1
+
+# 2. Start server (pick one)
+microscope-command-server                              # Entry point (hyphens!)
+python -m microscope_command_server.server.qp_server   # Module syntax
+```
+
+**Common mistake:** The command is `microscope-command-server` (with **hyphens**), not `microscope_command_server` (with underscores).
 
 ## Prerequisites
 

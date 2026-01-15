@@ -112,7 +112,10 @@ if ($Development) {
         }
     }
 
-    # Also install pycromanager
+    # Also install standalone packages not included in the editable packages
+    Write-Host "    -> Installing: opencv-python-headless" -ForegroundColor Cyan
+    & $venvPip install opencv-python-headless
+
     Write-Host "    -> Installing: pycromanager" -ForegroundColor Cyan
     & $venvPip install pycromanager
 
