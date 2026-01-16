@@ -1,0 +1,133 @@
+// QPSC Complete System Architecture
+digraph QPSC_Complete_Architecture {
+	compound=true nodesep=0.5 rankdir=TB ranksep=0.6 splines=ortho
+	node [fontname=Helvetica fontsize=11 shape=box style="rounded,filled"]
+	edge [fontname=Helvetica fontsize=9]
+	subgraph cluster_user {
+		color="#3498DB" fillcolor="#EBF5FB" fontname="Helvetica Bold" fontsize=12 label=User style=filled
+		researcher [label="Researcher / Pathologist
+(Define ROIs, Configure Acquisition)" fillcolor="#3498DB" fontcolor=white]
+	}
+	subgraph cluster_qupath {
+		color="#4A90D9" fillcolor="#E8F4FD" fontname="Helvetica Bold" fontsize=12 label="QuPath Ecosystem (Java)" style=filled
+		subgraph cluster_qp_core {
+			color="#4A90D9" label="QuPath Core" style=dashed
+			qp_app [label="QuPath Application" fillcolor="#4A90D9" fontcolor=white]
+			qp_viewer [label="Image Viewer
+& Annotations" fillcolor="#4A90D9" fontcolor=white]
+			qp_project [label="Project System" fillcolor="#4A90D9" fontcolor=white]
+		}
+		subgraph cluster_qpsc {
+			color="#4A90D9" fillcolor="#D4E8FC" label="qupath-extension-qpsc" style=filled
+			qpsc_controller [label="Workflow Controllers
+(BoundingBox, ExistingImage,
+Alignment)" fillcolor="#5DA5E8" fontcolor=white]
+			qpsc_modality [label="Modality System
+(PPM, Brightfield, etc.)" fillcolor="#5DA5E8" fontcolor=white]
+			qpsc_socket [label="Socket Client
+(TCP Communication)" fillcolor="#5DA5E8" fontcolor=white]
+			qpsc_utils [label="Utilities
+(Config, Tiling,
+Coordinates)" fillcolor="#5DA5E8" fontcolor=white]
+		}
+		t2p [label="qupath-extension-
+tiles-to-pyramid
+(Stitching)" fillcolor="#7AB8F5" fontcolor=white]
+	}
+	subgraph cluster_python {
+		color="#306998" fillcolor="#E8F0F8" fontname="Helvetica Bold" fontsize=12 label="Python Microscope Control (pip packages)" style=filled
+		subgraph cluster_server {
+			color="#306998" fillcolor="#D4E4F4" label="microscope-command-server" style=filled
+			srv_socket [label="Socket Server
+(TCP/IP)" fillcolor="#306998" fontcolor=white]
+			srv_workflow [label="Acquisition Workflows
+(Orchestration)" fillcolor="#306998" fontcolor=white]
+			srv_pipeline [label="Processing Pipeline" fillcolor="#306998" fontcolor=white]
+		}
+		subgraph cluster_control {
+			color="#306998" fillcolor="#D4E4F4" label="microscope-control" style=filled
+			ctrl_hw [label="Hardware Abstraction
+(Stage, Camera)" fillcolor="#4A7DB8" fontcolor=white]
+			ctrl_af [label="Autofocus System
+(Algorithms, Metrics)" fillcolor="#4A7DB8" fontcolor=white]
+			ctrl_tissue [label="Tissue Detection
+(Empty Region Skip)" fillcolor="#4A7DB8" fontcolor=white]
+			ctrl_config [label="Config Manager
+(YAML Loading)" fillcolor="#4A7DB8" fontcolor=white]
+		}
+		subgraph cluster_ppm {
+			color="#306998" fillcolor="#D4E4F4" label="ppm-library" style=filled
+			ppm_cal [label="PPM Calibration
+(Polarizer, Hue-to-Angle)" fillcolor="#4A7DB8" fontcolor=white]
+			ppm_debayer [label="Debayering
+(CPU/GPU)" fillcolor="#4A7DB8" fontcolor=white]
+			ppm_imaging [label="Image Processing
+(Background, Correction)" fillcolor="#4A7DB8" fontcolor=white]
+			ppm_analysis [label="Analysis Workflows
+(Fiber Angles)" fillcolor="#4A7DB8" fontcolor=white]
+		}
+		subgraph cluster_configs {
+			color="#27AE60" fillcolor="#E8F8E8" label="microscope-configurations" style=filled
+			cfg_templates [label="YAML Templates
+(config, autofocus,
+imageprocessing)" fillcolor="#27AE60" fontcolor=white]
+			cfg_resources [label="Hardware Resources
+(LOCI Lookup Tables)" fillcolor="#27AE60" fontcolor=white]
+		}
+	}
+	subgraph cluster_mm {
+		color="#E67E22" fillcolor="#FDF2E8" fontname="Helvetica Bold" fontsize=12 label="Micro-Manager Stack" style=filled
+		pycromanager [label="Pycro-Manager
+(Python-Java Bridge)" fillcolor="#E67E22" fontcolor=white]
+		micromanager [label="Micro-Manager
+(Device Adapters)" fillcolor="#D35400" fontcolor=white]
+		mmcore [label="MMCore API" fillcolor="#D35400" fontcolor=white]
+	}
+	subgraph cluster_hw {
+		color="#C0392B" fillcolor="#FDEDEC" fontname="Helvetica Bold" fontsize=12 label="Microscope Hardware" style=filled
+		hw_stage [label="XYZ Stage" fillcolor="#C0392B" fontcolor=white]
+		hw_camera [label=Camera fillcolor="#C0392B" fontcolor=white]
+		hw_optics [label="Optics
+(Polarizers, Objectives,
+Illumination)" fillcolor="#C0392B" fontcolor=white]
+	}
+	subgraph cluster_data {
+		color="#9B59B6" fillcolor="#F4ECF7" fontname="Helvetica Bold" fontsize=12 label="Data Output" style=filled
+		data_tiles [label="Raw Tiles
+(OME-TIFF)" fillcolor="#9B59B6" fontcolor=white]
+		data_pyramid [label="Pyramidal Images
+(OME-ZARR / OME-TIFF)" fillcolor="#9B59B6" fontcolor=white]
+	}
+	researcher -> qp_viewer [label="Draw ROIs"]
+	qp_app -> qp_viewer
+	qp_app -> qp_project
+	qp_viewer -> qpsc_controller [label="ROI Bounds"]
+	qpsc_controller -> qpsc_modality
+	qpsc_controller -> qpsc_socket
+	qpsc_controller -> qpsc_utils
+	qpsc_modality -> qpsc_socket
+	qpsc_socket -> srv_socket [label="TCP Socket
+Commands" color="#E74C3C" penwidth=2.5 style=bold]
+	srv_socket -> srv_workflow
+	srv_workflow -> srv_pipeline
+	srv_workflow -> ctrl_hw
+	srv_workflow -> ctrl_af
+	srv_pipeline -> ppm_debayer
+	srv_pipeline -> ppm_imaging
+	ctrl_af -> ctrl_tissue
+	ctrl_config -> cfg_templates [style=dashed]
+	cfg_templates -> cfg_resources [label=references style=dashed]
+	ppm_cal -> ppm_analysis
+	ctrl_hw -> pycromanager [label="Python API"]
+	pycromanager -> micromanager [label="Java Bridge"]
+	micromanager -> mmcore
+	mmcore -> hw_stage
+	mmcore -> hw_camera
+	mmcore -> hw_optics
+	hw_camera -> data_tiles [label=Capture style=dashed]
+	data_tiles -> t2p [label=Stitch]
+	t2p -> data_pyramid
+	data_pyramid -> qp_project [label=Import]
+	qp_project -> qp_viewer [label="Iterative
+Acquisition" color="#27AE60" style=dashed]
+}

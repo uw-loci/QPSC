@@ -1,0 +1,23 @@
+// QPSC Overview
+digraph QPSC_Slide {
+	bgcolor=transparent nodesep=1 rankdir=LR ranksep=1.5 splines=spline
+	node [fontname="Helvetica Bold" fontsize=16 height=1 shape=box style="rounded,filled,bold" width=2.2]
+	edge [fontname=Helvetica fontsize=12 penwidth=3]
+	annotate [label="QuPath
+Annotate
+Regions" fillcolor="#4A90D9" fontcolor=white]
+	acquire [label="Automated
+Acquisition
+& Processing" fillcolor="#306998" fontcolor=white]
+	analyze [label="High-Res
+Images for
+Analysis" fillcolor="#9B59B6" fontcolor=white]
+	annotate -> acquire [label="Software
+Controls
+Microscope" color="#E74C3C" fontcolor="#E74C3C"]
+	acquire -> analyze [label="Stitched
+Pyramidal
+Images" color="#27AE60" fontcolor="#27AE60"]
+	analyze -> annotate [label="Iterative
+Refinement" color="#7F8C8D" constraint=false style=dashed]
+}

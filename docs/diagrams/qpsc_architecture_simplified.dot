@@ -1,0 +1,28 @@
+// QPSC - Software-Driven Microscopy
+digraph QPSC_Simplified {
+	nodesep=0.8 rankdir=LR ranksep=1.2 splines=polyline
+	node [fontname=Helvetica fontsize=14 height=0.8 shape=box style="rounded,filled" width=2]
+	edge [fontname=Helvetica fontsize=11 penwidth=2]
+	user [label="Researcher
+Defines Regions" fillcolor="#3498DB" fontcolor=white shape=ellipse]
+	qupath [label="QuPath
++ QPSC Extension
+(Annotation & Control)" fillcolor="#4A90D9" fontcolor=white]
+	python [label="Python Server
+(Acquisition &
+Processing)" fillcolor="#306998" fontcolor=white]
+	micromanager [label="Micro-Manager
+(Hardware Control)" fillcolor="#E67E22" fontcolor=white]
+	microscope [label="Automated
+Microscope" fillcolor="#C0392B" fontcolor=white shape=box3d]
+	output [label="High-Resolution
+Images" fillcolor="#9B59B6" fontcolor=white shape=folder]
+	user -> qupath [label="1. Draw ROIs" color="#2C3E50"]
+	qupath -> python [label="2. Send Commands" color="#2C3E50"]
+	python -> micromanager [label="3. Control" color="#2C3E50"]
+	micromanager -> microscope [label="4. Move & Capture" color="#2C3E50"]
+	microscope -> python [label="5. Images" color="#7F8C8D" constraint=false style=dashed]
+	python -> output [label="6. Process & Stitch" color="#7F8C8D" style=dashed]
+	output -> qupath [label="7. Import Results" color="#7F8C8D" constraint=false style=dashed]
+	qupath -> user [label="8. Refine & Repeat" color="#27AE60" constraint=false style=dotted]
+}
