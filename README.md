@@ -791,29 +791,29 @@ See [Configuration Documentation](docs/configuration.md) for full details.
 ```mermaid
 flowchart LR
     subgraph Input
-        Slide["Overview\nImage"]
-        ROI["User\nAnnotations"]
+        Slide["Overview<br>Image"]
+        ROI["User<br>Annotations"]
     end
 
     subgraph Transform
-        Pixel["Pixel\nCoordinates"]
-        Stage["Stage\nCoordinates"]
-        Grid["Tile\nGrid"]
+        Pixel["Pixel<br>Coordinates"]
+        Stage["Stage<br>Coordinates"]
+        Grid["Tile<br>Grid"]
     end
 
     subgraph Acquire
-        Seq["Acquisition\nSequence"]
-        Cap["Multi-angle\nCapture"]
+        Seq["Acquisition<br>Sequence"]
+        Cap["Multi-angle<br>Capture"]
     end
 
     subgraph Process
-        Raw["Raw\nTiles"]
+        Raw["Raw<br>Tiles"]
         Stitch["Stitching"]
     end
 
     subgraph Output
-        ZARR["OME-ZARR\nPyramid"]
-        Project["QuPath\nProject"]
+        ZARR["OME-ZARR<br>Pyramid"]
+        Project["QuPath<br>Project"]
     end
 
     Slide --> Pixel
@@ -827,11 +827,17 @@ flowchart LR
     Stitch --> ZARR
     ZARR --> Project
 
+    %% Iterative workflow - acquired images become new input
+    Project -.->|"Use as new<br>overview image"| Slide
+
     style Pixel fill:#4A90D9,color:#fff
     style Stage fill:#4A90D9,color:#fff
     style Seq fill:#306998,color:#fff
     style ZARR fill:#9B59B6,color:#fff
+    style Project fill:#27AE60,color:#fff
 ```
+
+*The dashed loop shows how acquired images can serve as the basis for subsequent targeted acquisitions - enabling multi-scale, iterative imaging workflows.*
 
 ## Development
 
