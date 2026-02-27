@@ -861,15 +861,15 @@ $summaryContent += @"
 if ($Development) {
     $summaryContent += @"
    # With venv activated:
-   python -c "import microscope_command_server; print('OK:', microscope_server.__file__)"
+   python -c "import microscope_command_server; print('OK:', microscope_command_server.__file__)"
    python -c "import microscope_control; print('OK:', microscope_control.__file__)"
-   python -c "import ppm; print('OK:', ppm.__file__)"
+   python -c "import ppm_library; print('OK:', ppm_library.__file__)"
 "@
 } else {
     $summaryContent += @"
-   python -c "import microscope_command_server; print('OK:', microscope_server.__file__)"
+   python -c "import microscope_command_server; print('OK:', microscope_command_server.__file__)"
    python -c "import microscope_control; print('OK:', microscope_control.__file__)"
-   python -c "import ppm; print('OK:', ppm.__file__)"
+   python -c "import ppm_library; print('OK:', ppm_library.__file__)"
 "@
 }
 
