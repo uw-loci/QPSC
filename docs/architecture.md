@@ -238,15 +238,13 @@ ppm_library/
 │   ├── writer.py              # TIFF I/O with metadata
 │   └── jai_calibration.py     # JAI camera calibration
 └── debayering/
-    ├── cpu.py                 # CPU Bayer demosaicing
-    ├── gpu.py                 # GPU Bayer demosaicing
-    └── verify_gpu.py          # GPU availability check
+    └── cpu.py                 # CPU Bayer demosaicing
 ```
 
 **Key Responsibilities:**
 - PPM calibration and processing
 - Background/flatfield correction
-- Bayer pattern debayering (CPU and GPU)
+- Bayer pattern debayering (CPU)
 - TIFF I/O with metadata
 - Image processing utilities
 
@@ -560,14 +558,13 @@ QuPath Project
 
 1. **Stage Movement**: Slowest component (seconds per position)
 2. **Autofocus**: Can take 10-30 seconds per position
-3. **Image Debayering**: CPU-intensive (GPU acceleration available)
+3. **Image Debayering**: CPU-intensive
 4. **Network Transfer**: Minimal (commands are small, images saved to disk)
 
 ### Optimizations
 
 - **Tile Order**: Minimize stage travel distance
 - **Autofocus Adaptivity**: Skip autofocus on flat samples
-- **GPU Debayering**: 10-50x speedup for large acquisitions
 - **Asynchronous I/O**: Overlapping disk writes with acquisition
 
 ---
