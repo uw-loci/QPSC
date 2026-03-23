@@ -84,6 +84,10 @@ flowchart LR
 4. **Acquire** - The QPSC extension sends a workflow to the microscope command server to capture high-resolution tiles
 5. **Stitch & Import** - Tiles are stitched in a QuPath extension into pyramidal images and imported into a QuPath project along with metadata for sorting the results
 
+## Repository Ecosystem
+
+![QPSC Repository Ecosystem](docs/diagrams/qpsc_repo_tree.png)
+
 ## Component Repositories
 
 ### QuPath Extensions
@@ -91,6 +95,7 @@ flowchart LR
 | Repository | Description | Language |
 |------------|-------------|----------|
 | [qupath-extension-qpsc](https://github.com/uw-loci/qupath-extension-qpsc) | Main QPSC QuPath extension - UI, workflows, coordinate transforms | Java |
+| [qupath-extension-ppm](https://github.com/uw-loci/qupath-extension-ppm) | PPM (Polarized light Microscopy) modality plugin - calibration and analysis workflows for birefringent samples | Java |
 | [qupath-extension-tiles-to-pyramid](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid) | Stitches acquired tiles into pyramidal OME-ZARR images | Java |
 
 ### Python Microscope Control
@@ -106,8 +111,9 @@ flowchart LR
 
 | Repository | Description |
 |------------|-------------|
+| [qupath-extension-DL-pixel-classifier](https://github.com/uw-loci/qupath-extension-DL-pixel-classifier) | Deep learning pixel classification with embedded Python (UNet, MuViT, ONNX) |
+| [qupath-extension-pyclustering](https://github.com/uw-loci/qupath-extension-pyclustering) | Python-powered clustering and phenotyping for multiplexed imaging |
 | [qupath-extension-ocr4labels](https://github.com/MichaelSNelson/qupath-extension-ocr4labels) | OCR for slide label text extraction |
-| [QuPath_Confusion_Matrix_Extension](https://github.com/kgallik/QuPath_Confusion_Matrix_Extension) | Classification validation tools |
 
 ## Architecture
 
@@ -133,10 +139,9 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
 
 | Modality | Description | Status |
 |----------|-------------|--------|
-| **PPM** (Polarized Light) | Multi-angle polarization microscopy for birefringent samples | Active |
+| **PPM** (Polarized Light) | Multi-angle polarization microscopy for birefringent samples (via [qupath-extension-ppm](https://github.com/uw-loci/qupath-extension-ppm)) | Active |
 | **Brightfield** | Standard transmitted light imaging | Active |
-| **Fluorescence** | Multi-channel fluorescence (planned) | Planned |
-| **SHG/Multiphoton** | Second harmonic generation imaging | Experimental |
+| **Fluorescence** | Multi-channel fluorescence | Planned |
 
 ## Installation
 
@@ -212,7 +217,7 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-
 - Creates a Python virtual environment
 - Installs Python packages from GitHub (latest versions, including prereleases)
 - Installs OpenCV (required for autofocus)
-- Downloads QPSC and Tiles-to-Pyramid extension JARs (shadow JARs with bundled dependencies)
+- Downloads QPSC, PPM, and Tiles-to-Pyramid extension JARs (shadow JARs with bundled dependencies)
 - Stores extensions in local `QPSC\extensions\` folder for easy access
 - Automatically copies extensions to QuPath user data directory
 - Downloads configuration templates
@@ -457,13 +462,17 @@ Download the latest JAR files from GitHub releases:
    - Navigate to: [qupath-extension-qpsc/releases](https://github.com/uw-loci/qupath-extension-qpsc/releases)
    - Download: `qupath-extension-qpsc-[version].jar`
 
-2. **Tiles-to-Pyramid Extension** (stitching)
+2. **PPM Extension** (polarized light microscopy modality)
+   - Navigate to: [qupath-extension-ppm/releases](https://github.com/uw-loci/qupath-extension-ppm/releases)
+   - Download: `qupath-extension-ppm-[version].jar`
+
+3. **Tiles-to-Pyramid Extension** (stitching)
    - Navigate to: [qupath-extension-tiles-to-pyramid/releases](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid/releases)
    - Download: `qupath-extension-tiles-to-pyramid-[version].jar`
 
 **Install extensions:**
 
-Copy both JAR files to QuPath's extensions folder:
+Copy all JAR files to QuPath's extensions folder:
 
 - **Windows (MSI install)**: `C:\Users\[YourUsername]\AppData\Local\QuPath-0.6.0\extensions\`
 - **Windows (portable)**: `C:\Users\[YourUsername]\QuPath\extensions\`
@@ -546,6 +555,7 @@ For step-by-step instructions with screenshots and troubleshooting, see individu
 | **Command Server** | [microscope_command_server](https://github.com/uw-loci/microscope_command_server) | [Installation](https://github.com/uw-loci/microscope_command_server#installation) |
 | **Configuration Templates** | [microscope_configurations](https://github.com/uw-loci/microscope_configurations) | [Configuration Guide](https://github.com/uw-loci/microscope_configurations#usage) |
 | **QPSC Extension** | [qupath-extension-qpsc](https://github.com/uw-loci/qupath-extension-qpsc) | [Extension Docs](https://github.com/uw-loci/qupath-extension-qpsc#installation) |
+| **PPM Extension** | [qupath-extension-ppm](https://github.com/uw-loci/qupath-extension-ppm) | [Extension Docs](https://github.com/uw-loci/qupath-extension-ppm#installation) |
 | **Stitching Extension** | [qupath-extension-tiles-to-pyramid](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid) | [Extension Docs](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid#installation) |
 
 ---
@@ -869,6 +879,13 @@ QuPath Extensions:
 │   │   ├── ui/                      # JavaFX dialogs
 │   │   └── utilities/               # Coordinate transforms, config
 │   └── build.gradle
+├── qupath-extension-ppm/            # PPM modality plugin
+│   ├── src/main/java/qupath/ext/ppm/
+│   │   ├── handler/                 # PPMModalityHandler, rotation
+│   │   ├── ui/                      # PPM-specific dialogs
+│   │   ├── workflow/                # Calibration workflows
+│   │   └── analysis/                # Analysis & batch processing
+│   └── build.gradle
 └── qupath-extension-tiles-to-pyramid/  # Image stitching
 
 Python Microscope Control (pip-installable packages):
@@ -903,8 +920,7 @@ Python Microscope Control (pip-installable packages):
 │   │   ├── tissue_detection.py     # Empty region detection
 │   │   └── writer.py               # TIFF I/O
 │   ├── debayering/
-│   │   ├── cpu.py                  # CPU debayering
-│   │   └── gpu.py                  # GPU debayering
+│   │   └── cpu.py                  # CPU debayering
 │   └── pyproject.toml
 │
 └── microscope_configurations/       # YAML configuration templates
