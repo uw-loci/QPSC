@@ -171,19 +171,20 @@ Install these foundational components **in this order** before QPSC installation
 - **Windows Note**: Check "Add Python to PATH" during installation
 
 #### 4. Windows Media Feature Pack (Windows N/KN Editions Only)
+
+> **Most users can skip this.** Standard Windows editions (Home, Pro, Education) already include these components. Only install if you encounter `ImportError: DLL load failed while importing cv2`.
+
 - **Required for**: Windows N or KN editions (Education N, Pro N, etc.)
 - **Purpose**: Provides media codecs required by OpenCV (autofocus functionality)
-- **Symptom without it**: `ImportError: DLL load failed while importing cv2`
+- **Check if you need this**: Open Settings -> System -> About. If "Edition" ends with "N", you need it.
 - **Installation**: [Media Feature Pack Download](https://support.microsoft.com/en-us/topic/media-feature-pack-list-for-windows-n-editions-c1c6fffa-d052-8338-7a79-a4bb980a700a)
-- **Check if you need this**:
-  - Open Settings → System → About
-  - If "Edition" shows "Windows 10/11 Education N" or "Pro N", you need the Media Feature Pack
-- **Note**: Standard Windows editions (Home, Pro, Education) already include these components
 
 #### 5. Java Development Kit (For Extension Development Only)
+
+> **Most users can skip this.** Only needed if you want to build QuPath extensions from source code.
+
 - **Version**: Java 21+
 - **Purpose**: Building QuPath extensions from source
-- **Note**: Not required for using QPSC, only for modifying extension code
 - **Installation**: [Adoptium Temurin](https://adoptium.net/)
 
 ---
@@ -197,6 +198,10 @@ Install these foundational components **in this order** before QPSC installation
 For users who want to use QPSC without modifying code:
 
 **1. Open PowerShell** (Run as Administrator recommended)
+
+> **PowerShell version:** The script requires PowerShell 5.1+, which is included with Windows 10 and later. You should not need to install anything extra. If you get errors about unrecognized commands, check your version with `$PSVersionTable.PSVersion`.
+>
+> **Execution policy:** If you get a "cannot be loaded because running scripts is disabled" error, run: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` and try again.
 
 **2. Navigate to your home directory** (avoid System32!):
 ```powershell
