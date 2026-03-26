@@ -149,13 +149,27 @@ QPSC requires several components that work together. This section guides you thr
 
 ### Prerequisites
 
-Install these foundational components **in this order** before QPSC installation:
+**Microscope Hardware Requirements:**
+
+| Component | Status | Purpose |
+|-----------|--------|---------|
+| Motorized XY stage | **Required** | Tile-based acquisition -- stage moves between positions |
+| Motorized Z stage | **Required** | Autofocus (sweep drift check + standard Z-sweep) |
+| Digital camera | **Required** | Image capture (Micro-Manager compatible) |
+| Rotation stage (PSG) | Recommended (PPM) | Polarizer rotation for multi-angle PPM imaging |
+| Motorized objective turret | Optional | Automated objective switching (not yet software-controlled -- manual switch required) |
+| Motorized filter wheel | Optional | Filter changes for fluorescence (future modality support) |
+| Slide scanner with macro camera | Optional | Overview image for alignment workflow and Stage Map overlay |
+
+All motorized components must be controllable through Micro-Manager device adapters.
+
+Install these foundational **software** components **in this order** before QPSC installation:
 
 #### 1. Micro-Manager (Hardware Control)
 - **Version**: 2.0+ (latest 2.0 gamma release recommended)
 - **Purpose**: Controls microscope hardware via device adapters
 - **Installation**: [Micro-Manager Download](https://micro-manager.org/Download_Micro-Manager_Latest_Release)
-- **Configuration**: Configure device adapters for your specific hardware before proceeding
+- **Configuration**: Configure device adapters for your specific hardware before proceeding. You should be able to move the XY and Z stages and capture images before continuing.
 - **Note**: Must be installed and tested before Python packages
 
 #### 2. QuPath (Digital Pathology Platform)
