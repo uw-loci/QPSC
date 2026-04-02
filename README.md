@@ -152,7 +152,7 @@ QPSC requires several components that work together. This section guides you thr
 |-----------|--------|---------|
 | Motorized XY stage | **Required** | Tile-based acquisition -- stage moves between positions |
 | Motorized Z stage | **Required** | Autofocus (sweep drift check + standard Z-sweep) |
-| Digital camera | **Required** | Image capture (Micro-Manager compatible) |
+| Image detector | **Required** | Camera or laser scanning detector (Micro-Manager compatible) |
 | Rotation stage (PSG) | Recommended (PPM) | Polarizer rotation for multi-angle PPM imaging |
 | Motorized objective turret | Optional | Automated objective switching (not yet software-controlled -- manual switch required) |
 | Motorized filter wheel | Optional | Filter changes for fluorescence (future modality support) |
