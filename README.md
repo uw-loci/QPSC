@@ -15,29 +15,32 @@ QPSC bridges [QuPath](https://qupath.github.io/)'s digital pathology environment
 > **Click any component** to navigate to its repository or documentation.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph User["User Layer"]
         U[("Pathologist / Researcher")]
     end
 
     subgraph QuPath["QuPath Application"]
+        direction LR
         QP["QuPath + QPSC Extension"]
         T2P["Tiles-to-Pyramid Extension"]
     end
 
     subgraph Python["Python Microscope Control"]
+        direction LR
         SRV["Command Server"]
         CTRL["Hardware Control"]
         PPM["PPM Library"]
     end
 
-    subgraph Hardware["Microscope"]
-        HW[("Microscope Hardware")]
-    end
-
     subgraph Bridge["Hardware Bridge"]
+        direction LR
         PM["Pycro-Manager"]
         MM["Micro-Manager"]
+    end
+
+    subgraph Hardware["Microscope"]
+        HW[("Microscope Hardware")]
     end
 
     U -->|"Define ROIs & Parameters"| QP
@@ -50,13 +53,9 @@ flowchart LR
 
     HW -.->|"Images"| CTRL
     CTRL -.->|"Processing"| PPM
-    PPM -.->|"Processed images and analysis"| SRV
+    PPM -.->|"Processed images"| SRV
     SRV -.->|"Raw tiles"| T2P
     T2P -.->|"Stitched OME-ZARR"| QP
-
-    %% Add invisible spacing node for padding
-    HW ~~~ SPACE[ ]
-    style SPACE fill:none,stroke:none
 
     style QP fill:#4A90D9,color:#fff
     style T2P fill:#4A90D9,color:#fff
@@ -114,6 +113,7 @@ flowchart LR
 | [qupath-extension-dl-pixel-classifier](https://github.com/uw-loci/qupath-extension-dl-pixel-classifier) | Deep learning pixel classification with embedded Python (UNet, MuViT, ONNX) |
 | [qupath-extension-cluster-analysis-tools](https://github.com/uw-loci/qupath-extension-cluster-analysis-tools) | Python-powered clustering and phenotyping for multiplexed imaging |
 | [qupath-extension-ocr4labels](https://github.com/uw-loci/qupath-extension-ocr4labels) | OCR for slide label text extraction |
+| [qupath-extension-dialog-manager](https://github.com/uw-loci/qupath-extension-dialog-manager) | Automatic dialog window position tracking and persistence across sessions |
 
 ## Architecture
 
@@ -141,7 +141,8 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
 |----------|-------------|--------|
 | **PPM** (Polarized Light) | Multi-angle polarization microscopy for birefringent samples (via [qupath-extension-ppm](https://github.com/uw-loci/qupath-extension-ppm)) | Active |
 | **Brightfield** | Standard transmitted light imaging | Active |
-| **Fluorescence** | Multi-channel fluorescence | Planned |
+| **Widefield Fluorescence** | Multi-channel widefield fluorescence imaging | Planned |
+| **Point Scanning** | Laser scanning modalities including two-photon, SHG, and single-photon confocal | Planned |
 
 ## Installation
 
