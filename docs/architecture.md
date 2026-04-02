@@ -10,105 +10,82 @@ QPSC is a modular system consisting of multiple independent components that work
 
 ```mermaid
 flowchart TB
-    subgraph QuPathEco["QuPath Ecosystem"]
-        subgraph Core["QuPath Core"]
-            QApp["QuPath Application"]
-            QProj["Project System"]
-            QAnnot["Annotations"]
-        end
-
-        subgraph QPSC["qupath-extension-qpsc"]
-            Ctrl["Workflow Controllers"]
-            Modal["Modality System"]
-            Svc["Socket Services"]
-            Utils["Utilities"]
-        end
-
+    subgraph QuPath["QuPath Application"]
+        direction LR
+        QApp["QuPath Core\n(Projects, Annotations, Viewer)"]
         T2P["tiles-to-pyramid"]
     end
 
-    subgraph PythonStack["Python Microscope Control (Modular)"]
-        subgraph ServerPkg["microscope_command_server"]
-            QPSrv["Socket Server"]
-            AcqEng["Acquisition Workflows"]
-        end
-        subgraph ControlPkg["microscope_control"]
-            HWPy["Hardware Abstraction"]
-            AF["Autofocus System"]
-            TissueDet["Tissue Detection"]
-            ConfigMgr["Config Manager"]
-        end
-        subgraph PPMPkg["ppm_library"]
-            PPMProc["PPM Processing"]
-            Debayer["Debayering"]
-            Imaging["Background Correction"]
-        end
-        subgraph ConfigPkg["microscope_configurations"]
-            Templates["YAML Templates"]
-            Examples["Example Configs"]
-            Resources["Hardware Resources"]
-        end
+    subgraph QPSC["qupath-extension-qpsc"]
+        direction LR
+        Ctrl["Workflow Controllers"]
+        Modal["Modality System"]
+        Svc["Socket Services"]
+        Utils["Utilities"]
     end
 
-    subgraph MMEco["Micro-Manager Stack"]
+    subgraph Server["microscope_command_server"]
+        direction LR
+        QPSrv["Socket Server"]
+        AcqEng["Acquisition Workflows"]
+    end
+
+    subgraph Control["microscope_control"]
+        direction LR
+        HWPy["Hardware Abstraction"]
+        AF["Autofocus"]
+        TissueDet["Tissue Detection"]
+        ConfigMgr["Config Manager"]
+    end
+
+    subgraph PPMPkg["ppm_library"]
+        direction LR
+        PPMProc["PPM Processing"]
+        Debayer["Debayering"]
+        Imaging["Background Correction"]
+    end
+
+    subgraph MM["Micro-Manager Stack"]
+        direction LR
         PyCro["Pycro-Manager"]
         MicroM["Micro-Manager"]
         MMCore["MMCore API"]
     end
 
     subgraph HW["Hardware"]
+        direction LR
         Stage["XYZ Stage"]
         Cam["Camera"]
-        Extras["Polarizers, LEDs,\nObjectives, etc."]
-    end
-
-    subgraph Data["Data Flow"]
-        Tiles["Raw Tiles"]
-        ZARR["OME-ZARR"]
+        Extras["Polarizers, LEDs, Objectives"]
     end
 
     QApp --> QPSC
-    QAnnot -->|"ROI Bounds"| Ctrl
-    Ctrl --> Modal
     Ctrl --> Svc
-    Ctrl --> Utils
-
     Svc ==>|"TCP Socket"| QPSrv
-
     QPSrv --> AcqEng
     AcqEng --> HWPy
     AcqEng --> AF
-    AcqEng --> ConfigMgr
     AcqEng --> PPMProc
-    AcqEng --> Debayer
-    AcqEng --> Imaging
-
     AF --> TissueDet
-    ConfigMgr -.->|"Loads"| Templates
-    ConfigMgr -.->|"References"| Resources
-
     HWPy --> PyCro
-    HWPy --> Debayer
     PyCro --> MicroM
     MicroM --> MMCore
-    MMCore --> Stage
-    MMCore --> Cam
-    MMCore --> Extras
+    MMCore --> HW
 
-    Cam --> Tiles
-    Tiles --> ZARR
-    ZARR --> T2P
-    T2P -->|"Import"| QProj
+    Cam -.->|"Raw Tiles"| T2P
+    T2P -.->|"OME-ZARR"| QApp
+    ConfigMgr -.->|"YAML configs"| AcqEng
 
-    %% Styling
     style QPSC fill:#4A90D9,color:#fff
-    style ServerPkg fill:#306998,color:#fff
-    style ControlPkg fill:#4A7DB8,color:#fff
+    style Server fill:#306998,color:#fff
+    style Control fill:#4A7DB8,color:#fff
     style PPMPkg fill:#4A7DB8,color:#fff
-    style ConfigPkg fill:#95A5A6,color:#000
     style PyCro fill:#E67E22,color:#fff
     style MicroM fill:#D35400,color:#fff
+    style MMCore fill:#D35400,color:#fff
     style Cam fill:#C0392B,color:#fff
+    style Stage fill:#C0392B,color:#fff
+    style Extras fill:#C0392B,color:#fff
 ```
 
 ## Component Details
