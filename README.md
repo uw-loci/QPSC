@@ -79,14 +79,15 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    ROI["Annotate regions<br/>in QuPath"] --> Acq["Coordinate transform<br/>and tiled acquisition"] --> Stitch["Stitch into<br/>OME-ZARR pyramid"] --> Project["Import to<br/>QuPath project"]
-    Project -.->|"Re-acquire"| ROI
-    Project ~~~ PAD[ ]
+    Img["Load overview<br/>image"] --> ROI["Annotate<br/>regions"] --> Xform["Coordinate<br/>transform"] --> Acq["Acquire<br/>tiles"] --> Stitch["Stitch &<br/>import"]
+    Stitch -.->|"Re-acquire"| Img
+    Stitch ~~~ PAD[ ]
 
+    style Img fill:#4A90D9,color:#fff
     style ROI fill:#4A90D9,color:#fff
+    style Xform fill:#306998,color:#fff
     style Acq fill:#306998,color:#fff
-    style Stitch fill:#9B59B6,color:#fff
-    style Project fill:#27AE60,color:#fff
+    style Stitch fill:#27AE60,color:#fff
     style PAD fill:none,stroke:none,color:none
 ```
 
