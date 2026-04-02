@@ -468,7 +468,7 @@ microscope-control           1.0.0    /path/to/microscope_control
 ppm-library                  1.0.0    /path/to/ppm_library
 ```
 
-**Troubleshooting:** See [Python Package Installation Troubleshooting](#troubleshooting-python-package-installation) below.
+**Troubleshooting:** See the [Python Package Installation](docs/troubleshooting.md#python-package-installation-issues) section of the troubleshooting guide.
 
 #### Step 3: Install QuPath Extensions
 
@@ -576,182 +576,14 @@ For step-by-step instructions with screenshots and troubleshooting, see individu
 
 ---
 
-### Troubleshooting QuPath Installation
+### Troubleshooting
 
-#### Problem: Setup script reports "QuPath not found"
+For installation issues, see the **[Troubleshooting Guide](docs/troubleshooting.md)**:
 
-**Cause:** QuPath is installed in a non-standard location or not installed.
-
-**Solution:**
-
-1. **Verify QuPath is installed:**
-   - Look for QuPath in your Start Menu (Windows) or Applications folder (macOS)
-   - Or download from: https://qupath.github.io/
-
-2. **Find your QuPath installation directory:**
-   - **Windows MSI install:** Usually `C:\Users\YourUsername\AppData\Local\QuPath-0.6.0\`
-   - **Windows portable:** Could be anywhere you extracted it
-   - **macOS:** `/Applications/QuPath.app` or `~/Applications/QuPath.app`
-
-3. **Re-run setup script with QuPath location:**
-   ```powershell
-   .\PPM-QuPath.ps1 -QuPathDir "C:\Users\YourUsername\AppData\Local\QuPath-0.6.0"
-   ```
-
-4. **Or skip QuPath setup and install extensions manually:**
-   ```powershell
-   .\PPM-QuPath.ps1 -SkipQuPath
-   ```
-   Then follow [Step 3: Install QuPath Extensions](#step-3-install-qupath-extensions) to install manually.
-
-#### Problem: Can't find QuPath extensions directory
-
-**Solution:**
-
-1. Launch QuPath
-2. Go to `Edit > Preferences`
-3. Look for "Extension directory" - this shows the exact path
-4. Copy JARs to that directory
-5. Restart QuPath
-
-Common locations:
-- **Windows MSI:** `%LOCALAPPDATA%\QuPath-0.6.0\extensions\`
-- **Windows portable:** `%USERPROFILE%\QuPath\extensions\`
-- **macOS:** `~/Library/Application Support/QuPath/extensions/`
-- **Linux:** `~/.local/share/QuPath/extensions/`
-
----
-
-### Troubleshooting Python Package Installation
-
-#### Problem: `ModuleNotFoundError` when importing packages
-
-**Cause:** Packages not installed or installation failed.
-
-**Symptoms:**
-```python
->>> import ppm_library
-ModuleNotFoundError: No module named 'ppm_library'
-```
-
-**Solution:**
-
-1. **Verify packages are installed:**
-   ```powershell
-   # Activate venv (if using one)
-   C:\Users\YourUsername\QPSC\venv_qpsc\Scripts\Activate.ps1
-
-   # Check installed packages
-   pip list | Select-String "microscope|ppm"
-   ```
-
-2. **If packages are missing, reinstall in dependency order:**
-   ```powershell
-   pip install git+https://github.com/uw-loci/ppm_library.git
-   pip install git+https://github.com/uw-loci/microscope_control.git
-   pip install git+https://github.com/uw-loci/microscope_command_server.git
-   ```
-
-3. **For development installations (editable mode):**
-   ```bash
-   cd /path/to/repositories
-   pip install -e ppm_library/
-   pip install -e microscope_control/
-   pip install -e microscope_command_server/
-   ```
-
-4. **Test imports:**
-   ```python
-   python -c "import ppm_library, microscope_control, microscope_command_server; print('All imports OK')"
-   ```
-
-#### Problem: `UnicodeEncodeError` in server logs
-
-**Cause:** Unicode characters in logging strings (Windows cp1252 encoding limitation).
-
-**Solution:** This has been fixed in recent code - update to latest version:
-```bash
-cd microscope_command_server
-git pull
-```
-
-The codebase now uses ASCII-only characters in all logging and internal strings.
-
-#### Problem: Circular dependency importing ppm_library
-
-**Cause:** `ppm_library/__init__.py` imports from `microscope_control`.
-
-**Solution:** This has been fixed. Update `ppm_library/__init__.py` to remove the problematic import on line 39:
-```python
-# REMOVE this line:
-from microscope_control.autofocus.tissue_detection import EmptyRegionDetector
-```
-
-#### Problem: OpenCV (cv2) import errors
-
-QPSC requires OpenCV for autofocus functionality. There are two common OpenCV issues:
-
-**Issue 1: OpenCV not installed**
-
-**Symptoms:**
-```
-ModuleNotFoundError: No module named 'cv2'
-```
-
-**Solution:**
-```bash
-pip install opencv-python
-```
-
-**Issue 2: OpenCV DLL loading error on Windows N editions**
-
-**Symptoms:**
-```
-ImportError: DLL load failed while importing cv2: The specified module could not be found.
-```
-
-**Cause:** Windows N editions (Education N, Pro N, Home N) do not include media components required by OpenCV.
-
-**Solution:**
-
-1. **Check your Windows edition:**
-   - Open Settings → System → About
-   - Look at "Edition" - if it ends with "N" (e.g., "Windows 10 Education N"), you need the Media Feature Pack
-
-2. **Install Media Feature Pack:**
-   - Download from: [Media Feature Pack for Windows N editions](https://support.microsoft.com/en-us/topic/media-feature-pack-list-for-windows-n-editions-c1c6fffa-d052-8338-7a79-a4bb980a700a)
-   - Follow Microsoft's installation instructions
-   - Restart your computer after installation
-
-3. **Verify OpenCV works:**
-   ```powershell
-   python -c "import cv2; print('OpenCV version:', cv2.__version__)"
-   ```
-
-**Note:** If you're using conda-based Python, you can alternatively install opencv via conda which bundles all necessary DLLs:
-```bash
-conda install -c conda-forge opencv
-```
-
-#### Problem: Port 5000 already in use
-
-**Symptoms:**
-```
-OSError: [Errno 48] Address already in use
-```
-
-**Cause:** Another server instance or application is using port 5000.
-
-**Solution:**
-```bash
-# Find process using port 5000
-# Windows:
-netstat -ano | findstr :5000
-# macOS/Linux:
-lsof -i :5000
-
-# Kill the process if safe, or change server port in code
-```
+- [QuPath installation issues](docs/troubleshooting.md#qupath-installation-issues) -- QuPath not found, extensions directory, QPSC not appearing
+- [Python package issues](docs/troubleshooting.md#python-package-installation-issues) -- ModuleNotFoundError, OpenCV errors, circular imports
+- [Server and network issues](docs/troubleshooting.md#server-and-network-issues) -- port conflicts
+- [Setup script issues](docs/troubleshooting.md#setup-script-issues) -- PowerShell execution policy
 
 ---
 
@@ -815,46 +647,41 @@ See [Configuration Documentation](docs/configuration.md) for full details.
 ## Data Flow
 
 ```mermaid
-flowchart LR
-    subgraph Input
-        Slide["Overview<br>Image"]
-        ROI["User<br>Annotations"]
+flowchart TB
+    subgraph Input["Define"]
+        direction LR
+        Slide["Overview Image"]
+        ROI["User Annotations"]
     end
 
-    subgraph Transform
-        Pixel["Pixel<br>Coordinates"]
-        Stage["Stage<br>Coordinates"]
-        Grid["Tile<br>Grid"]
+    subgraph TransformLayer["Transform"]
+        direction LR
+        Pixel["Pixel Coordinates"]
+        Stage["Stage Coordinates"]
+        Grid["Tile Grid"]
     end
 
-    subgraph Acquire
-        Seq["Acquisition<br>Sequence"]
-        Cap["Multi-angle<br>Capture"]
+    subgraph AcquireLayer["Acquire"]
+        direction LR
+        Seq["Acquisition Sequence"]
+        Cap["Multi-angle Capture"]
+        Raw["Raw Tiles"]
     end
 
-    subgraph Process
-        Raw["Raw<br>Tiles"]
+    subgraph OutputLayer["Output"]
+        direction LR
         Stitch["Stitching"]
-    end
-
-    subgraph Output
-        ZARR["OME-ZARR<br>Pyramid"]
-        Project["QuPath<br>Project"]
+        ZARR["OME-ZARR Pyramid"]
+        Project["QuPath Project"]
     end
 
     Slide --> Pixel
     ROI --> Pixel
-    Pixel --> Stage
-    Stage --> Grid
-    Grid --> Seq
-    Seq --> Cap
-    Cap --> Raw
-    Raw --> Stitch
-    Stitch --> ZARR
-    ZARR --> Project
+    Pixel --> Stage --> Grid
+    Grid --> Seq --> Cap --> Raw
+    Raw --> Stitch --> ZARR --> Project
 
-    %% Iterative workflow - acquired images become new input
-    Project -.->|"Use as new<br>overview image"| Slide
+    Project -.->|"Re-acquire at higher resolution"| Slide
 
     style Pixel fill:#4A90D9,color:#fff
     style Stage fill:#4A90D9,color:#fff
@@ -863,7 +690,7 @@ flowchart LR
     style Project fill:#27AE60,color:#fff
 ```
 
-*The dashed loop shows how acquired images can serve as the basis for subsequent targeted acquisitions - enabling multi-scale, iterative imaging workflows.*
+*The dashed loop shows how acquired images can serve as the basis for subsequent targeted acquisitions -- enabling multi-scale, iterative imaging workflows.*
 
 ## Development
 
@@ -883,83 +710,7 @@ cd qupath-extension-qpsc
 
 ### Project Structure
 
-```
-QPSC Repositories (Modular Architecture)/
-
-QuPath Extensions:
-├── qupath-extension-qpsc/           # Main QPSC extension
-│   ├── src/main/java/qupath/ext/qpsc/
-│   │   ├── controller/              # Workflow orchestration
-│   │   ├── modality/                # Imaging mode plugins
-│   │   ├── service/                 # Socket communication
-│   │   ├── ui/                      # JavaFX dialogs
-│   │   └── utilities/               # Coordinate transforms, config
-│   └── build.gradle
-├── qupath-extension-ppm/            # PPM modality plugin
-│   ├── src/main/java/qupath/ext/ppm/
-│   │   ├── handler/                 # PPMModalityHandler, rotation
-│   │   ├── ui/                      # PPM-specific dialogs
-│   │   ├── workflow/                # Calibration workflows
-│   │   └── analysis/                # Analysis & batch processing
-│   └── build.gradle
-└── qupath-extension-tiles-to-pyramid/  # Image stitching
-
-Python Microscope Control (pip-installable packages):
-├── microscope_command_server/       # Package: microscope-command-server
-│   ├── server/
-│   │   ├── qp_server.py            # Socket server
-│   │   └── protocol.py             # Communication protocol
-│   ├── acquisition/
-│   │   ├── workflow.py             # Acquisition orchestration
-│   │   ├── tiles.py                # Tile grid utilities
-│   │   └── pipeline.py             # Processing pipeline
-│   ├── client/
-│   │   └── client.py               # Python client library
-│   └── pyproject.toml
-│
-├── microscope_control/              # Package: microscope-control
-│   ├── hardware/
-│   │   ├── base.py                 # Hardware abstraction
-│   │   └── pycromanager.py         # Micro-Manager integration
-│   ├── autofocus/
-│   │   ├── core.py                 # Autofocus algorithms
-│   │   └── metrics.py              # Focus quality metrics
-│   ├── config/
-│   │   └── manager.py              # YAML config management
-│   └── pyproject.toml
-│
-├── ppm_library/                     # Package: ppm-library
-│   ├── ppm/
-│   │   └── calibration.py          # PPM calibration
-│   ├── imaging/
-│   │   ├── background.py           # Background correction
-│   │   ├── tissue_detection.py     # Empty region detection
-│   │   └── writer.py               # TIFF I/O
-│   ├── debayering/
-│   │   └── cpu.py                  # CPU debayering
-│   └── pyproject.toml
-│
-└── microscope_configurations/       # YAML configuration templates
-    ├── config_template.yml
-    ├── autofocus_template.yml
-    ├── imageprocessing_template.yml
-    ├── config_PPM.yml              # Example PPM config
-    ├── config_CAMM.yml             # Example CAMM config
-    └── resources/                  # Hardware resource definitions
-```
-
-**Dependency Chain:**
-```
-microscope_configurations (runtime config files)
-         ↓
-    ┌────┴────┐
-    ↓         ↓
-microscope_control  ppm_library (standalone)
-    ↓         ↓
-    └────┬────┘
-         ↓
-microscope_command_server
-```
+For detailed package structure and component documentation, see the **[Architecture Guide](docs/architecture.md)**.
 
 ## Communication Protocol
 
@@ -981,9 +732,9 @@ sequenceDiagram
         Srv-->>QP: Progress update
     end
 
-    Srv->>Srv: Stitch tiles
     Srv-->>QP: Acquisition complete
-    QP->>QP: Import result
+    QP->>QP: Stitch tiles (tiles-to-pyramid)
+    QP->>QP: Import result to project
 ```
 
 ## Contributing
