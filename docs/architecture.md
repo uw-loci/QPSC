@@ -16,6 +16,7 @@ flowchart TB
 
     subgraph QPSCLayer["qupath-extension-qpsc"]
         direction LR
+        QPSCpad[ ]
         Ctrl["Workflow Controllers"]
         Modal["Modality System"]
         Svc["Socket Services"]
@@ -92,6 +93,7 @@ flowchart TB
     style Cam fill:#C0392B,color:#fff
     style Stage fill:#C0392B,color:#fff
     style Extras fill:#C0392B,color:#fff
+    style QPSCpad fill:none,stroke:none,color:none
     style PAD fill:none,stroke:none,color:none
 ```
 
