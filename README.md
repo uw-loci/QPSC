@@ -77,11 +77,26 @@ flowchart TB
 
 ## Core Workflow
 
+```mermaid
+flowchart LR
+    ROI["Annotate regions<br/>in QuPath"] --> Acq["Coordinate transform<br/>and tiled acquisition"] --> Stitch["Stitch into<br/>OME-ZARR pyramid"] --> Project["Import to<br/>QuPath project"]
+    Project -.->|"Re-acquire"| ROI
+    Project ~~~ PAD[ ]
+
+    style ROI fill:#4A90D9,color:#fff
+    style Acq fill:#306998,color:#fff
+    style Stitch fill:#9B59B6,color:#fff
+    style Project fill:#27AE60,color:#fff
+    style PAD fill:none,stroke:none,color:none
+```
+
 1. **Setup Coordinates** - Use known/estimated stage coordinates, or load an image from a slide scanner to enable mapping of stage coordinates to locations on the slide
 2. **Define Regions** - Draw annotations on areas of interest
 3. **Configure Acquisition** - Select imaging modality, objectives, and parameters
 4. **Acquire** - The QPSC extension sends a workflow to the microscope command server to capture high-resolution tiles
-5. **Stitch & Import** - Tiles are stitched in a QuPath extension into pyramidal images and imported into a QuPath project along with metadata for sorting the results
+5. **Stitch & Import** - Tiles are stitched into pyramidal images and imported into the QuPath project with metadata for sorting
+
+*Acquired images can serve as the basis for subsequent targeted acquisitions at higher resolution or with different modalities.*
 
 ## Component Repositories
 
@@ -643,21 +658,6 @@ modalities:
 ```
 
 See [Configuration Documentation](docs/configuration.md) for full details.
-
-## Data Flow
-
-```mermaid
-flowchart LR
-    ROI["Annotate regions<br/>in QuPath"] --> Acq["Coordinate transform<br/>and tiled acquisition"] --> Stitch["Stitch into<br/>OME-ZARR pyramid"] --> Project["Import to<br/>QuPath project"]
-    Project -.->|"Re-acquire"| ROI
-
-    style ROI fill:#4A90D9,color:#fff
-    style Acq fill:#306998,color:#fff
-    style Stitch fill:#9B59B6,color:#fff
-    style Project fill:#27AE60,color:#fff
-```
-
-*Acquired images are imported back into the QuPath project, where they can serve as the basis for subsequent targeted acquisitions at higher resolution or with different modalities.*
 
 ## Development
 
