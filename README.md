@@ -4,6 +4,8 @@
 
 QPSC bridges [QuPath](https://qupath.github.io/)'s digital pathology environment with automated microscope control via [Micro-Manager](https://micro-manager.org/) and [Pycro-Manager](https://pycro-manager.readthedocs.io/). Users define regions of interest in QuPath and automatically acquire high-resolution microscopy data at those locations.
 
+> **Note:** QPSC requires a microscope with motorized stage, digital camera, and other automated hardware controllable through Micro-Manager device adapters. It does not add automation to manual microscopes.
+
 ---
 
 **[→ Jump to Installation Instructions](#installation)**
@@ -16,9 +18,7 @@ QPSC bridges [QuPath](https://qupath.github.io/)'s digital pathology environment
 
 ```mermaid
 flowchart TB
-    subgraph User["User Layer"]
-        U[("Pathologist / Researcher")]
-    end
+    U[("Pathologist / Researcher")]
 
     subgraph QuPath["QuPath Application"]
         direction LR
@@ -82,10 +82,6 @@ flowchart TB
 3. **Configure Acquisition** - Select imaging modality, objectives, and parameters
 4. **Acquire** - The QPSC extension sends a workflow to the microscope command server to capture high-resolution tiles
 5. **Stitch & Import** - Tiles are stitched in a QuPath extension into pyramidal images and imported into a QuPath project along with metadata for sorting the results
-
-## Repository Ecosystem
-
-![QPSC Repository Ecosystem](docs/diagrams/qpsc_repo_tree.png)
 
 ## Component Repositories
 
