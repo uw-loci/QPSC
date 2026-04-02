@@ -8,7 +8,7 @@ QPSC bridges [QuPath](https://qupath.github.io/)'s digital pathology environment
 
 ---
 
-**[→ Jump to Installation Instructions](#installation)**
+**[→ Installation Instructions](#installation)** | **[→ Set Up Your Microscope](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/INSTALLATION.md#step-5-create-configuration-files-setup-wizard)** | **[→ Quick Start (Brightfield)](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/QUICKSTART-BF.md)**
 
 ---
 
@@ -163,7 +163,8 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
 
 QPSC requires several components that work together. This section guides you through installing everything needed for annotation-driven microscopy acquisition.
 
-### Prerequisites
+<details open>
+<summary><h3>Prerequisites</h3></summary>
 
 **Microscope Hardware Requirements:**
 
@@ -217,9 +218,10 @@ Install these foundational **software** components **in this order** before QPSC
 - **Purpose**: Building QuPath extensions from source
 - **Installation**: [Adoptium Temurin](https://adoptium.net/)
 
----
+</details>
 
-### Automated Installation (Windows - Recommended)
+<details>
+<summary><h3>Automated Installation (Windows - Recommended)</h3></summary>
 
 **Best for most users** - Automated PowerShell script handles all Python package installation, QuPath extensions, and configuration templates.
 
@@ -315,7 +317,8 @@ Open the `INSTALLATION_SUMMARY.txt` file to see all available verification comma
 
 ---
 
-#### Development Mode
+<details>
+<summary><strong>Development Mode</strong></summary>
 
 For developers who want to modify QPSC code:
 
@@ -338,9 +341,11 @@ cd $env:USERPROFILE
 
 **Detailed setup script documentation:** [SETUP_SCRIPTS_README.md](SETUP_SCRIPTS_README.md)
 
----
+</details>
+</details>
 
-### Manual Installation (All Platforms)
+<details>
+<summary><h3>Manual Installation (All Platforms)</h3></summary>
 
 **When to use manual installation:**
 - macOS or Linux systems
@@ -577,9 +582,10 @@ INFO - Ready for connections...
 
 To stop the server: Press `Ctrl+C`
 
----
+</details>
 
-### Detailed Component Installation Guides
+<details>
+<summary><h3>Detailed Component Installation Guides</h3></summary>
 
 For step-by-step instructions with screenshots and troubleshooting, see individual repository READMEs:
 
@@ -593,9 +599,10 @@ For step-by-step instructions with screenshots and troubleshooting, see individu
 | **PPM Extension** | [qupath-extension-ppm](https://github.com/uw-loci/qupath-extension-ppm) | [Extension Docs](https://github.com/uw-loci/qupath-extension-ppm#installation) |
 | **Stitching Extension** | [qupath-extension-tiles-to-pyramid](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid) | [Extension Docs](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid#installation) |
 
----
+</details>
 
-### Troubleshooting
+<details>
+<summary><h3>Troubleshooting</h3></summary>
 
 For installation issues, see the **[Troubleshooting Guide](docs/troubleshooting.md)**:
 
@@ -604,9 +611,10 @@ For installation issues, see the **[Troubleshooting Guide](docs/troubleshooting.
 - [Server and network issues](docs/troubleshooting.md#server-and-network-issues) -- port conflicts
 - [Setup script issues](docs/troubleshooting.md#setup-script-issues) -- PowerShell execution policy
 
----
+</details>
 
-### Post-Installation Verification
+<details>
+<summary><h3>Post-Installation Verification</h3></summary>
 
 After installation, verify everything works:
 
@@ -631,6 +639,20 @@ Expected: Server should start and show "Server listening on 0.0.0.0:5000"
 
 #### 4. Test Full Workflow
 See [Usage Guide](docs/usage.md) for a complete workflow walkthrough
+
+</details>
+
+### Next Steps: Connect to Your Microscope
+
+Software is installed -- now configure QPSC for your specific microscope hardware.
+
+| Step | Guide | What it does |
+|------|-------|-------------|
+| **1. Create config files** | **[Setup Wizard](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/INSTALLATION.md#step-5-create-configuration-files-setup-wizard)** | The Setup Wizard (Extensions > QP Scope > Setup Wizard) walks you through creating YAML configuration files that describe your objectives, cameras, stage limits, and imaging modalities. |
+| **2. Connect & align** | **[Microscope Alignment](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/tools/microscope-alignment.md)** | Calibrate the coordinate mapping between QuPath images and your microscope stage. Required once per microscope/scanner combination. |
+| **3. First acquisition** | **[Brightfield Quick Start](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/QUICKSTART-BF.md)** | Step-by-step guide to your first tile acquisition. |
+
+For the complete setup walkthrough: **[Full Installation & Setup Guide](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/INSTALLATION.md)**
 
 ---
 
