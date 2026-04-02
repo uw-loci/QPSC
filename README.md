@@ -79,12 +79,18 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    Img["Load overview<br/>image"] --> ROI["Annotate<br/>regions"] --> Xform["Coordinate<br/>transform"] --> Acq["Acquire<br/>tiles"] --> Stitch["Stitch &<br/>import"]
+    subgraph Start["Define Region"]
+        direction TB
+        Img["Load overview<br/>image & annotate"]
+        Acq0["Acquire bounding<br/>box region"]
+    end
+
+    Start --> Xform["Coordinate<br/>transform"] --> Acq["Acquire<br/>tiles"] --> Stitch["Stitch &<br/>import"]
     Stitch -.->|"Re-acquire"| Img
     Stitch ~~~ PAD[ ]
 
     style Img fill:#4A90D9,color:#fff
-    style ROI fill:#4A90D9,color:#fff
+    style Acq0 fill:#4A90D9,color:#fff
     style Xform fill:#306998,color:#fff
     style Acq fill:#306998,color:#fff
     style Stitch fill:#27AE60,color:#fff
