@@ -81,12 +81,12 @@ flowchart TB
 flowchart LR
     subgraph Start["Define Region"]
         direction TB
-        Img["Acquire bounding<br/>box region"]
-        Acq0["Load overview<br/>image & annotate"]
+        Acq0["Acquire bounding<br/>box region"]
+        Img["Load overview<br/>image & annotate"]
     end
 
     Start --> Xform["Coordinate<br/>transform"] --> Acq["Acquire<br/>tiles"] --> Stitch["Stitch &<br/>import"]
-    Stitch -.->|"Re-acquire"| Acq0
+    Stitch -.->|"Re-acquire"| Img
     Stitch ~~~ PAD[ ]
 
     style Img fill:#4A90D9,color:#fff
