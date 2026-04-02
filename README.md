@@ -648,40 +648,21 @@ See [Configuration Documentation](docs/configuration.md) for full details.
 
 ```mermaid
 flowchart TB
-    subgraph Input["Define"]
+    subgraph DefineAndTransform["Define and Transform"]
         direction LR
-        Slide["Overview Image"]
-        ROI["User Annotations"]
+        Slide["Overview Image"] --> Pixel["Pixel Coordinates"]
+        ROI["Annotations"] --> Pixel
+        Pixel --> Stage["Stage Coordinates"] --> Grid["Tile Grid"]
     end
 
-    subgraph TransformLayer["Transform"]
+    subgraph AcquireAndOutput["Acquire and Output"]
         direction LR
-        Pixel["Pixel Coordinates"]
-        Stage["Stage Coordinates"]
-        Grid["Tile Grid"]
+        Seq["Acquisition"] --> Cap["Multi-angle Capture"] --> Raw["Raw Tiles"]
+        Raw --> Stitch["Stitching"] --> ZARR["OME-ZARR"] --> Project["QuPath Project"]
     end
 
-    subgraph AcquireLayer["Acquire"]
-        direction LR
-        Seq["Acquisition Sequence"]
-        Cap["Multi-angle Capture"]
-        Raw["Raw Tiles"]
-    end
-
-    subgraph OutputLayer["Output"]
-        direction LR
-        Stitch["Stitching"]
-        ZARR["OME-ZARR Pyramid"]
-        Project["QuPath Project"]
-    end
-
-    Slide --> Pixel
-    ROI --> Pixel
-    Pixel --> Stage --> Grid
-    Grid --> Seq --> Cap --> Raw
-    Raw --> Stitch --> ZARR --> Project
-
-    Project -.->|"Re-acquire at higher resolution"| Slide
+    Grid --> Seq
+    Project -.->|"Re-acquire"| Slide
 
     style Pixel fill:#4A90D9,color:#fff
     style Stage fill:#4A90D9,color:#fff
