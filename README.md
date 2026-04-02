@@ -648,12 +648,12 @@ See [Configuration Documentation](docs/configuration.md) for full details.
 
 ```mermaid
 flowchart LR
-    ROI["Annotations"] --> Coords["Coordinate<br/>Transform"] --> Acq["Tiled<br/>Acquisition"] --> Stitch["Stitch"] --> ZARR["OME-ZARR"] --> Project["QuPath<br/>Project"]
+    ROI["Annotate regions<br/>in QuPath"] --> Acq["Coordinate transform<br/>and tiled acquisition"] --> Stitch["Stitch into<br/>OME-ZARR pyramid"] --> Project["Import to<br/>QuPath project"]
     Project -.->|"Re-acquire"| ROI
 
-    style Coords fill:#4A90D9,color:#fff
+    style ROI fill:#4A90D9,color:#fff
     style Acq fill:#306998,color:#fff
-    style ZARR fill:#9B59B6,color:#fff
+    style Stitch fill:#9B59B6,color:#fff
     style Project fill:#27AE60,color:#fff
 ```
 
