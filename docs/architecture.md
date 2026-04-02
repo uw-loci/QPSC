@@ -10,13 +10,13 @@ QPSC is a modular system consisting of multiple independent components that work
 
 ```mermaid
 flowchart TB
-    subgraph QuPath["QuPath Application"]
+    subgraph QuPathLayer["QuPath Application"]
         direction LR
-        QApp["QuPath Core\n(Projects, Annotations, Viewer)"]
+        QApp["QuPath Core<br/>Projects, Annotations, Viewer"]
         T2P["tiles-to-pyramid"]
     end
 
-    subgraph QPSC["qupath-extension-qpsc"]
+    subgraph QPSCLayer["qupath-extension-qpsc"]
         direction LR
         Ctrl["Workflow Controllers"]
         Modal["Modality System"]
@@ -24,13 +24,13 @@ flowchart TB
         Utils["Utilities"]
     end
 
-    subgraph Server["microscope_command_server"]
+    subgraph ServerLayer["microscope_command_server"]
         direction LR
         QPSrv["Socket Server"]
         AcqEng["Acquisition Workflows"]
     end
 
-    subgraph Control["microscope_control"]
+    subgraph ControlLayer["microscope_control"]
         direction LR
         HWPy["Hardware Abstraction"]
         AF["Autofocus"]
@@ -38,28 +38,28 @@ flowchart TB
         ConfigMgr["Config Manager"]
     end
 
-    subgraph PPMPkg["ppm_library"]
+    subgraph PPMLayer["ppm_library"]
         direction LR
         PPMProc["PPM Processing"]
         Debayer["Debayering"]
         Imaging["Background Correction"]
     end
 
-    subgraph MM["Micro-Manager Stack"]
+    subgraph MMLayer["Micro-Manager Stack"]
         direction LR
         PyCro["Pycro-Manager"]
         MicroM["Micro-Manager"]
         MMCore["MMCore API"]
     end
 
-    subgraph HW["Hardware"]
+    subgraph HWLayer["Hardware"]
         direction LR
         Stage["XYZ Stage"]
         Cam["Camera"]
         Extras["Polarizers, LEDs, Objectives"]
     end
 
-    QApp --> QPSC
+    QApp --> Ctrl
     Ctrl --> Svc
     Svc ==>|"TCP Socket"| QPSrv
     QPSrv --> AcqEng
@@ -70,16 +70,18 @@ flowchart TB
     HWPy --> PyCro
     PyCro --> MicroM
     MicroM --> MMCore
-    MMCore --> HW
+    MMCore --> Stage
+    MMCore --> Cam
+    MMCore --> Extras
 
     Cam -.->|"Raw Tiles"| T2P
     T2P -.->|"OME-ZARR"| QApp
     ConfigMgr -.->|"YAML configs"| AcqEng
 
-    style QPSC fill:#4A90D9,color:#fff
-    style Server fill:#306998,color:#fff
-    style Control fill:#4A7DB8,color:#fff
-    style PPMPkg fill:#4A7DB8,color:#fff
+    style QPSCLayer fill:#4A90D9,color:#fff
+    style ServerLayer fill:#306998,color:#fff
+    style ControlLayer fill:#4A7DB8,color:#fff
+    style PPMLayer fill:#4A7DB8,color:#fff
     style PyCro fill:#E67E22,color:#fff
     style MicroM fill:#D35400,color:#fff
     style MMCore fill:#D35400,color:#fff
