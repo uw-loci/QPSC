@@ -647,31 +647,17 @@ See [Configuration Documentation](docs/configuration.md) for full details.
 ## Data Flow
 
 ```mermaid
-flowchart TB
-    subgraph DefineAndTransform["Define and Transform"]
-        direction LR
-        Slide["Overview Image"] --> Pixel["Pixel Coordinates"]
-        ROI["Annotations"] --> Pixel
-        Pixel --> Stage["Stage Coordinates"] --> Grid["Tile Grid"]
-    end
+flowchart LR
+    ROI["Annotations"] --> Coords["Coordinate<br/>Transform"] --> Acq["Tiled<br/>Acquisition"] --> Stitch["Stitch"] --> ZARR["OME-ZARR"] --> Project["QuPath<br/>Project"]
+    Project -.->|"Re-acquire"| ROI
 
-    subgraph AcquireAndOutput["Acquire and Output"]
-        direction LR
-        Seq["Acquisition"] --> Cap["Multi-angle Capture"] --> Raw["Raw Tiles"]
-        Raw --> Stitch["Stitching"] --> ZARR["OME-ZARR"] --> Project["QuPath Project"]
-    end
-
-    Grid --> Seq
-    Project -.->|"Re-acquire"| Slide
-
-    style Pixel fill:#4A90D9,color:#fff
-    style Stage fill:#4A90D9,color:#fff
-    style Seq fill:#306998,color:#fff
+    style Coords fill:#4A90D9,color:#fff
+    style Acq fill:#306998,color:#fff
     style ZARR fill:#9B59B6,color:#fff
     style Project fill:#27AE60,color:#fff
 ```
 
-*The dashed loop shows how acquired images can serve as the basis for subsequent targeted acquisitions -- enabling multi-scale, iterative imaging workflows.*
+*Acquired images are imported back into the QuPath project, where they can serve as the basis for subsequent targeted acquisitions at higher resolution or with different modalities.*
 
 ## Development
 
