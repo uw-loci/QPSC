@@ -18,8 +18,6 @@ QPSC bridges [QuPath](https://qupath.github.io/)'s digital pathology environment
 
 ```mermaid
 flowchart TB
-    U[("Pathologist / Researcher")]
-
     subgraph QuPath["QuPath Application"]
         direction LR
         QP["QuPath + QPSC Extension"]
@@ -43,7 +41,6 @@ flowchart TB
         HW[("Microscope Hardware")]
     end
 
-    U -->|"Define ROIs & Parameters"| QP
     QP ==>|"Socket Commands"| SRV
     SRV --> CTRL
     SRV --> PPM
