@@ -11,9 +11,7 @@ QPSC is a modular system consisting of multiple independent components that work
 ```mermaid
 flowchart TB
     subgraph QuPathLayer["QuPath Application"]
-        direction LR
         QApp["QuPath Core<br/>Projects, Annotations, Viewer"]
-        T2P["tiles-to-pyramid"]
     end
 
     subgraph QPSCLayer["qupath-extension-qpsc"]
@@ -59,6 +57,8 @@ flowchart TB
         Extras["Polarizers, LEDs, Objectives"]
     end
 
+    T2P["tiles-to-pyramid<br/>Stitching"]
+
     QApp --> Ctrl
     Ctrl --> Svc
     Svc ==>|"TCP Socket"| QPSrv
@@ -78,16 +78,21 @@ flowchart TB
     T2P -.->|"OME-ZARR"| QApp
     ConfigMgr -.->|"YAML configs"| AcqEng
 
+    HWLayer ~~~ T2P
+    T2P ~~~ PAD[ ]
+
     style QPSCLayer fill:#4A90D9,color:#fff
     style ServerLayer fill:#306998,color:#fff
     style ControlLayer fill:#4A7DB8,color:#fff
     style PPMLayer fill:#4A7DB8,color:#fff
+    style T2P fill:#4A90D9,color:#fff
     style PyCro fill:#E67E22,color:#fff
     style MicroM fill:#D35400,color:#fff
     style MMCore fill:#D35400,color:#fff
     style Cam fill:#C0392B,color:#fff
     style Stage fill:#C0392B,color:#fff
     style Extras fill:#C0392B,color:#fff
+    style PAD fill:none,stroke:none,color:none
 ```
 
 ## Component Details
