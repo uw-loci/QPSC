@@ -244,6 +244,7 @@ if ($Development) {
         # Copy example configs
         Copy-Item -Path "$templateSource\config_PPM.yml" -Destination $configDir -Force -ErrorAction SilentlyContinue
         Copy-Item -Path "$templateSource\config_CAMM.yml" -Destination $configDir -Force -ErrorAction SilentlyContinue
+        Copy-Item -Path "$templateSource\config_OWS3.yml" -Destination $configDir -Force -ErrorAction SilentlyContinue
 
         # Copy resources
         $resourcesSource = Join-Path $templateSource "resources"
@@ -281,7 +282,8 @@ if ($Development) {
     # Download example configs from root
     $exampleFiles = @(
         "config_PPM.yml",
-        "config_CAMM.yml"
+        "config_CAMM.yml",
+        "config_OWS3.yml"
     )
 
     foreach ($file in $exampleFiles) {
