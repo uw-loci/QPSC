@@ -6,8 +6,8 @@ QPSC uses YAML configuration files to define microscope hardware, imaging modali
 
 | File | Purpose | Location |
 |------|---------|----------|
-| `config_<microscope>.yml` | Microscope-specific hardware and modality settings | `smartpath_configurations/` |
-| `resources_LOCI.yml` | Shared hardware component lookup tables | `smartpath_configurations/` |
+| `config_<microscope>.yml` | Microscope-specific hardware and modality settings | `microscope_configurations/` |
+| `resources_LOCI.yml` | Shared hardware component lookup tables | `microscope_configurations/` |
 | Acquisition Profiles | Pre-defined acquisition parameter sets | Within config files |
 
 ## Configuration Hierarchy
@@ -226,7 +226,7 @@ double pixelSize = config.getDouble("microscope.objectives[1].pixel_size_um");
 ### Python (Server)
 
 ```python
-from smart_wsi_scanner.config import load_config
+from microscope_command_server.config import load_config
 
 # Load configuration
 config = load_config("/path/to/config_ppm.yml")
@@ -250,7 +250,7 @@ If validation fails, QPSC workflows are disabled and an error is displayed.
 
 ## Example Configurations
 
-Complete example configurations are available in the [smartpath_configurations](https://github.com/uw-loci/smartpath_configurations) repository:
+Complete example configurations are available in the [microscope_configurations](https://github.com/uw-loci/microscope_configurations) repository:
 
 - `config_ppm.yml` - PPM microscope at LOCI
 - `config_brightfield.yml` - Standard brightfield system
@@ -280,4 +280,4 @@ Complete example configurations are available in the [smartpath_configurations](
 
 See also:
 - [QuPath Extension Documentation](https://github.com/uw-loci/qupath-extension-qpsc)
-- [Smart-WSI-Scanner Documentation](https://github.com/JenuC/smart-wsi-scanner)
+- [Microscope Command Server Documentation](https://github.com/uw-loci/microscope_command_server)

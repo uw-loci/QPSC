@@ -157,7 +157,7 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
 | **PPM** (Polarized Light) | Multi-angle polarization microscopy for birefringent samples (via [qupath-extension-ppm](https://github.com/uw-loci/qupath-extension-ppm)) | Active |
 | **Brightfield** | Standard transmitted light imaging | Active |
 | **Widefield Fluorescence** | Multi-channel widefield fluorescence imaging | Planned |
-| **Point Scanning** | Laser scanning modalities including two-photon, SHG, and single-photon confocal | Planned |
+| **Point Scanning** | Laser scanning modalities including two-photon, SHG, and single-photon confocal (via LaserScanningModalityHandler) | Beta |
 
 ## Installation
 
@@ -638,7 +638,7 @@ Expected: Server should start and show "Server listening on 0.0.0.0:5000"
 3. You should see menu options for workflows
 
 #### 4. Test Full Workflow
-See [Usage Guide](docs/usage.md) for a complete workflow walkthrough
+See the [Brightfield Quick Start](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/QUICKSTART-BF.md) or [Laser Scanning Quick Start](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/QUICKSTART-LSM.md) for workflow walkthroughs
 
 </details>
 
@@ -735,7 +735,7 @@ sequenceDiagram
 We welcome contributions! Please see individual repository guidelines:
 
 **QuPath Extensions:**
-- [QPSC Extension Contributing Guide](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/CONTRIBUTING.md)
+- [QPSC Extension Issues](https://github.com/uw-loci/qupath-extension-qpsc/issues)
 - [Tiles-to-Pyramid Extension](https://github.com/uw-loci/qupath-extension-tiles-to-pyramid)
 
 **Python Microscope Control:**
