@@ -251,7 +251,8 @@ C:\Users\YourName\QPSC\
 ├── qupath-extension-tiles-to-pyramid\ # Java source (cloned)
 ├── microscope_command_server\       # Python source (cloned)
 ├── microscope_control\              # Python source (cloned)
-├── ppm_library\                     # Python source (cloned)
+├── microscope_imageprocessing\      # Python source (cloned)
+├── ppm_library\                     # Python source (cloned, optional)
 ├── microscope_configurations\       # YAML templates (cloned)
 ├── configurations\                  # Your configurations (copied)
 ├── venv_qpsc\                       # Python virtual env
@@ -273,7 +274,7 @@ Python is not in your PATH. Either:
 1. Reinstall Python with "Add to PATH" checked, or
 2. Run the script with full path:
    ```powershell
-   C:\Python39\python.exe -m pip install git+https://github.com/uw-loci/ppm_library.git
+   C:\Python39\python.exe -m pip install git+https://github.com/uw-loci/microscope_imageprocessing.git
    ```
 
 ### "Git not found" (development mode)
@@ -319,7 +320,8 @@ If you see `ERROR: Could not find a version that satisfies the requirement`, ens
 3. Try installing packages manually in order:
    ```powershell
    pip install opencv-python-headless
-   pip install git+https://github.com/uw-loci/ppm_library.git
+   pip install git+https://github.com/uw-loci/microscope_imageprocessing.git
+   pip install git+https://github.com/uw-loci/ppm_library.git          # Optional: only for PPM microscopes
    pip install git+https://github.com/uw-loci/microscope_control.git
    pip install git+https://github.com/uw-loci/microscope_command_server.git
    pip install pycromanager
@@ -366,7 +368,7 @@ If no window appears:
 - **Editable Install:** In development mode, Python code changes take effect immediately without reinstalling
 - **Building Extensions:** Java extensions must be rebuilt after code changes (`.\gradlew build`)
 - **Configuration Files:** Never commit your custom configurations to Git - templates are provided for reference
-- **Installation Order:** Python packages must be installed in dependency order: ppm_library → microscope_control → microscope_command_server
+- **Installation Order:** Python packages must be installed in dependency order: microscope_imageprocessing -> ppm_library (optional) -> microscope_control -> microscope_command_server
 
 ## Differences from PyPI Installation
 
