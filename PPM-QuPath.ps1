@@ -68,6 +68,7 @@ if ($Development) {
 
     # Repository URLs for cloning
     $repos = @{
+        "microscope_imaging" = "https://github.com/uw-loci/microscope_imaging.git"
         "ppm_library" = "https://github.com/uw-loci/ppm_library.git"
         "microscope_control" = "https://github.com/uw-loci/microscope_control.git"
         "microscope_command_server" = "https://github.com/uw-loci/microscope_command_server.git"
@@ -122,6 +123,7 @@ if ($Development) {
     $venvPip = Join-Path $venvPath "Scripts\pip.exe"
 
     $installOrder = @(
+        "microscope_imaging",
         "ppm_library",
         "microscope_control",
         "microscope_command_server"
@@ -185,6 +187,7 @@ if ($Development) {
     # Install from GitHub URLs in dependency order
     $githubPackages = @(
         @{name="opencv-python-headless"; url="opencv-python-headless"},
+        @{name="microscope-imaging"; url="git+https://github.com/uw-loci/microscope_imaging.git"},
         @{name="ppm-library"; url="git+https://github.com/uw-loci/ppm_library.git"},
         @{name="microscope-control"; url="git+https://github.com/uw-loci/microscope_control.git"},
         @{name="microscope-command-server"; url="git+https://github.com/uw-loci/microscope_command_server.git"},
@@ -218,7 +221,7 @@ if ($Development) {
 Write-Host ""
 Write-Host "[+] Verifying package installation..." -ForegroundColor Cyan
 
-$packagesToVerify = @("opencv-python-headless", "microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
+$packagesToVerify = @("opencv-python-headless", "microscope-imaging", "microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
 $allPackagesInstalled = $true
 
 # Both Development and Production modes now use venv
@@ -652,7 +655,7 @@ Write-Host ""
 Write-Host "[1/3] Verifying Python packages..." -ForegroundColor Cyan
 
 `$packagesOK = `$true
-`$requiredPackages = @("opencv-python-headless", "microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
+`$requiredPackages = @("opencv-python-headless", "microscope-imaging", "microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
 
 foreach (`$pkg in `$requiredPackages) {
     `$result = & `$venvPip show `$pkg 2>`$null
@@ -841,8 +844,8 @@ echo Active venv: %VIRTUAL_ENV%
 echo.
 
 REM -- Pull latest from all repos --
-echo [1/5] Pulling latest code...
-for %%R in (ppm_library microscope_control microscope_command_server microscope_configurations) do (
+echo [1/6] Pulling latest code...
+for %%R in (microscope_imaging ppm_library microscope_control microscope_command_server microscope_configurations) do (
     if exist "%INSTALL_DIR%\%%R\.git" (
         echo    %%R: pulling...
         pushd "%INSTALL_DIR%\%%R"
@@ -857,7 +860,15 @@ set "PPM_EXTRAS="
 if "%~1"=="--analysis" set "PPM_EXTRAS=[analysis]"
 
 REM -- Install in dependency order --
-echo [2/5] Installing ppm-library%PPM_EXTRAS% ...
+echo [2/6] Installing microscope-imaging ...
+pip install -e "%INSTALL_DIR%\microscope_imaging" --quiet
+if errorlevel 1 (
+    echo FAILED: microscope-imaging install
+    pause
+    exit /b 1
+)
+
+echo [3/6] Installing ppm-library%PPM_EXTRAS% ...
 pip install -e "%INSTALL_DIR%\ppm_library%PPM_EXTRAS%" --quiet
 if errorlevel 1 (
     echo FAILED: ppm-library install
@@ -865,7 +876,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [3/5] Installing microscope-control ...
+echo [4/6] Installing microscope-control ...
 pip install -e "%INSTALL_DIR%\microscope_control" --quiet
 if errorlevel 1 (
     echo FAILED: microscope-control install
@@ -873,7 +884,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [4/5] Installing microscope-command-server ...
+echo [5/6] Installing microscope-command-server ...
 pip install -e "%INSTALL_DIR%\microscope_command_server" --quiet
 if errorlevel 1 (
     echo FAILED: microscope-command-server install
@@ -881,8 +892,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [5/5] Verifying ...
-pip show ppm-library microscope-control microscope-command-server 2>nul | findstr /i "Name: Version:"
+echo [6/6] Verifying ...
+pip show microscope-imaging ppm-library microscope-control microscope-command-server 2>nul | findstr /i "Name: Version:"
 
 echo.
 echo All packages updated successfully.
