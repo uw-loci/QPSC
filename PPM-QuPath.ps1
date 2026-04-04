@@ -94,6 +94,18 @@ if ($Development) {
         Write-Host "[!] Virtual environment exists (skipping creation)" -ForegroundColor Yellow
     }
 
+    # Upgrade pip first (pip 21.2.3 bundled with Python 3.10 does not support
+    # PEP 660 editable installs with pyproject.toml-only packages)
+    Write-Host "[+] Upgrading pip in virtual environment..." -ForegroundColor Cyan
+    $venvPython = Join-Path $venvPath "Scripts\python.exe"
+    & $venvPython -m pip install --upgrade pip --quiet
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "    [!] pip upgrade failed - editable installs may not work" -ForegroundColor Yellow
+        Write-Host "    Continuing anyway..." -ForegroundColor Yellow
+    } else {
+        Write-Host "    pip upgraded successfully" -ForegroundColor Green
+    }
+
     # Install packages in editable mode (dependency order is critical)
     Write-Host "[+] Installing packages in editable mode..." -ForegroundColor Green
     $venvPip = Join-Path $venvPath "Scripts\pip.exe"
@@ -145,6 +157,15 @@ if ($Development) {
 
     # Get activation script path
     $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
+
+    # Upgrade pip first (avoids noisy "pip version" warnings on every install)
+    Write-Host ""
+    Write-Host "[+] Upgrading pip in virtual environment..." -ForegroundColor Cyan
+    $venvPython = Join-Path $venvPath "Scripts\python.exe"
+    & $venvPython -m pip install --upgrade pip --quiet
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "    pip upgraded successfully" -ForegroundColor Green
+    }
 
     Write-Host ""
     Write-Host "[+] Installing packages into virtual environment..." -ForegroundColor Green
@@ -703,6 +724,146 @@ $launcherPath = Join-Path $InstallDir "Launch-QPSC.ps1"
 $launcherScript | Out-File -FilePath $launcherPath -Encoding UTF8
 Write-Host "    Created: $launcherPath" -ForegroundColor Green
 
+# Generate batch files for development mode
+if ($Development) {
+    Write-Host ""
+    Write-Host "[+] Creating development batch files..." -ForegroundColor Cyan
+
+    # --- start_server.bat ---
+    $startServerBat = @"
+@echo off
+REM ============================================================
+REM  Start QPSC Microscope Command Server (Development)
+REM
+REM  Prerequisites:
+REM    1. Micro-Manager must be running with hardware loaded
+REM    2. Python packages installed in editable mode
+REM
+REM  Usage:
+REM    Double-click this file, or run from command prompt.
+REM ============================================================
+
+setlocal
+
+REM -- Activate virtual environment --
+set "VENV_DIR=$InstallDir\venv_qpsc"
+
+if not exist "%VENV_DIR%\Scripts\activate.bat" (
+    echo ERROR: Virtual environment not found at %VENV_DIR%
+    echo Run PPM-QuPath.ps1 -Development to set up the environment.
+    pause
+    exit /b 1
+)
+
+call "%VENV_DIR%\Scripts\activate.bat"
+
+echo ============================================================
+echo  QPSC Microscope Command Server (Development)
+echo ============================================================
+echo.
+echo  Make sure Micro-Manager is running before proceeding.
+echo  Press Ctrl+C to stop the server.
+echo.
+
+REM -- Start the server --
+python -m microscope_command_server.server.qp_server
+
+REM -- If server exits, pause so the user can see any error --
+echo.
+echo Server stopped.
+pause
+"@
+
+    $startServerPath = Join-Path $InstallDir "start_server.bat"
+    $startServerBat | Out-File -FilePath $startServerPath -Encoding ASCII
+    Write-Host "    Created: $startServerPath" -ForegroundColor Green
+
+    # --- update_env.bat ---
+    $updateEnvBat = @"
+@echo off
+REM ============================================================
+REM  Update QPSC Python Environment (Development)
+REM
+REM  Pulls latest code from all repos and reinstalls packages
+REM  in editable mode. Run this after pulling updates.
+REM
+REM  Usage:
+REM    Double-click this file, or run from command prompt.
+REM    Optional: update_env.bat --analysis  (installs pandas extras)
+REM ============================================================
+
+setlocal
+
+set "INSTALL_DIR=$InstallDir"
+set "VENV_DIR=%INSTALL_DIR%\venv_qpsc"
+
+if not exist "%VENV_DIR%\Scripts\activate.bat" (
+    echo ERROR: Virtual environment not found at %VENV_DIR%
+    echo Run PPM-QuPath.ps1 -Development to set up the environment.
+    pause
+    exit /b 1
+)
+
+call "%VENV_DIR%\Scripts\activate.bat"
+
+echo.
+echo Active venv: %VIRTUAL_ENV%
+echo.
+
+REM -- Pull latest from all repos --
+echo [1/5] Pulling latest code...
+for %%R in (ppm_library microscope_control microscope_command_server microscope_configurations) do (
+    if exist "%INSTALL_DIR%\%%R\.git" (
+        echo    %%R: pulling...
+        pushd "%INSTALL_DIR%\%%R"
+        git pull --quiet 2>nul
+        popd
+    )
+)
+echo.
+
+REM -- Check for --analysis flag --
+set "PPM_EXTRAS="
+if "%~1"=="--analysis" set "PPM_EXTRAS=[analysis]"
+
+REM -- Install in dependency order --
+echo [2/5] Installing ppm-library%PPM_EXTRAS% ...
+pip install -e "%INSTALL_DIR%\ppm_library%PPM_EXTRAS%" --quiet
+if errorlevel 1 (
+    echo FAILED: ppm-library install
+    pause
+    exit /b 1
+)
+
+echo [3/5] Installing microscope-control ...
+pip install -e "%INSTALL_DIR%\microscope_control" --quiet
+if errorlevel 1 (
+    echo FAILED: microscope-control install
+    pause
+    exit /b 1
+)
+
+echo [4/5] Installing microscope-command-server ...
+pip install -e "%INSTALL_DIR%\microscope_command_server" --quiet
+if errorlevel 1 (
+    echo FAILED: microscope-command-server install
+    pause
+    exit /b 1
+)
+
+echo [5/5] Verifying ...
+pip show ppm-library microscope-control microscope-command-server 2>nul | findstr /i "Name: Version:"
+
+echo.
+echo All packages updated successfully.
+pause
+"@
+
+    $updateEnvPath = Join-Path $InstallDir "update_env.bat"
+    $updateEnvBat | Out-File -FilePath $updateEnvPath -Encoding ASCII
+    Write-Host "    Created: $updateEnvPath" -ForegroundColor Green
+}
+
 # Generate Installation Summary File
 Write-Host ""
 Write-Host "[+] Creating installation summary..." -ForegroundColor Cyan
@@ -935,8 +1096,8 @@ NEXT STEPS
 if ($Development) {
     $summaryContent += @"
 
-1. Activate Python Environment:
-   $venvPath\Scripts\Activate.ps1
+1. Configure Your Microscope:
+   Edit: $configDir\config_template.yml
 
 2. Build QuPath Extensions:
    cd $InstallDir\qupath-extension-qpsc
@@ -944,8 +1105,15 @@ if ($Development) {
 
 3. Copy Built JARs to QuPath Extensions Folder
 
-4. Configure Your Microscope:
-   Edit: $configDir\config_template.yml
+4. Start the Server:
+   Double-click: $InstallDir\start_server.bat
+
+5. After Pulling Updates:
+   Double-click: $InstallDir\update_env.bat
+
+Batch Files:
+   start_server.bat  - Activates venv and starts the microscope command server
+   update_env.bat    - Pulls latest code and reinstalls all packages
 "@
 } else {
     $summaryContent += @"
@@ -1044,6 +1212,7 @@ Write-Host "Installed Components:" -ForegroundColor Cyan
 if ($Development) {
     Write-Host "  [+] Python packages (editable mode in venv_qpsc)" -ForegroundColor White
     Write-Host "  [+] All repositories cloned for development" -ForegroundColor White
+    Write-Host "  [+] start_server.bat and update_env.bat" -ForegroundColor White
 } else {
     Write-Host "  [+] Python packages (from GitHub in venv_qpsc)" -ForegroundColor White
 }
@@ -1078,9 +1247,8 @@ Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan
 
 if ($Development) {
-    Write-Host "  1. Activate Python environment:" -ForegroundColor White
-    $venvActivate = Join-Path (Join-Path $InstallDir "venv_qpsc") "Scripts\Activate.ps1"
-    Write-Host "     $venvActivate" -ForegroundColor Yellow
+    Write-Host "  1. Configure your microscope:" -ForegroundColor White
+    Write-Host "     Edit: $configDir\config_template.yml" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  2. Build QuPath extensions:" -ForegroundColor White
     Write-Host "     cd $InstallDir\qupath-extension-qpsc" -ForegroundColor Yellow
@@ -1088,22 +1256,30 @@ if ($Development) {
     Write-Host ""
     Write-Host "  3. Copy built JAR files to QuPath extensions folder" -ForegroundColor White
     Write-Host ""
-    Write-Host "  4. Configure your microscope:" -ForegroundColor White
+    Write-Host "  4. Start the server:" -ForegroundColor White
+    Write-Host "     Double-click: $InstallDir\start_server.bat" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  5. After pulling updates, re-install packages:" -ForegroundColor White
+    Write-Host "     Double-click: $InstallDir\update_env.bat" -ForegroundColor Yellow
 } else {
     Write-Host "  1. Configure your microscope:" -ForegroundColor White
+    Write-Host "     Edit: $configDir\config_template.yml" -ForegroundColor Yellow
 }
 
-Write-Host "     Edit: $configDir\config_template.yml" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  2. Set up Micro-Manager device adapters for your hardware" -ForegroundColor White
+Write-Host "  Set up Micro-Manager device adapters for your hardware" -ForegroundColor White
 Write-Host ""
-Write-Host "  3. Launch QPSC:" -ForegroundColor White
-Write-Host "     $launcherPath --qupath" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "     3b. If QuPath is in a non-standard location:" -ForegroundColor White
-Write-Host "         .\PPM-QuPath.ps1 -QuPathDir ""D:\YourPath\QuPath-0.6.0""" -ForegroundColor Yellow
 
-if (-not $Development) {
+if ($Development) {
+    Write-Host "  Batch files created:" -ForegroundColor Cyan
+    Write-Host "     start_server.bat  - Start the microscope command server" -ForegroundColor Gray
+    Write-Host "     update_env.bat    - Pull updates and reinstall packages" -ForegroundColor Gray
+} else {
+    Write-Host "  Launch QPSC:" -ForegroundColor White
+    Write-Host "     $launcherPath --qupath" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "     If QuPath is in a non-standard location:" -ForegroundColor White
+    Write-Host "         .\PPM-QuPath.ps1 -QuPathDir ""D:\YourPath\QuPath-0.6.0""" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  Or manually:" -ForegroundColor White
     Write-Host "     python -m microscope_command_server.server.qp_server  # Start server" -ForegroundColor Yellow
