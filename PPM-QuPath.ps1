@@ -16,6 +16,17 @@ Write-Host "  QPSC $setupMode Setup" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# If user did not explicitly pass -InstallDir, prompt to confirm or change
+if (-not $PSBoundParameters.ContainsKey('InstallDir')) {
+    Write-Host "Installation directory: $InstallDir" -ForegroundColor White
+    Write-Host ""
+    $userInput = Read-Host "Press Enter to accept, or type a new path"
+    if ($userInput -ne "") {
+        $InstallDir = $userInput.Trim('"').Trim("'")
+    }
+    Write-Host ""
+}
+
 # Create installation directory
 if (-not (Test-Path $InstallDir)) {
     Write-Host "[+] Creating installation directory: $InstallDir" -ForegroundColor Green
@@ -620,17 +631,25 @@ if ($Development) {
 
 $launcherScript = @"
 # QPSC Launch Script
-# Starts Micro-Manager server and optionally QuPath
+# Starts the microscope command server and QuPath
+#
+# Usage:
+#   .\Launch-QPSC.ps1              # Start server + QuPath
+#   .\Launch-QPSC.ps1 --no-qupath  # Start server only
 
-Write-Host "Starting QPSC System..." -ForegroundColor Cyan
+param([switch]`$NoQuPath)
+if (`$args -contains "--no-qupath") { `$NoQuPath = `$true }
+
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  QPSC Launcher" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Verify Python packages are installed
-Write-Host "[+] Verifying Python packages..." -ForegroundColor Cyan
-
-# Use venv pip and python
 `$venvPip = "$InstallDir\venv_qpsc\Scripts\pip.exe"
 `$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
+
+# --- Step 1: Verify Python packages ---
+Write-Host "[1/3] Verifying Python packages..." -ForegroundColor Cyan
 
 `$packagesOK = `$true
 `$requiredPackages = @("opencv-python-headless", "microscope-command-server", "microscope-control", "ppm-library", "pycromanager")
@@ -638,85 +657,96 @@ Write-Host "[+] Verifying Python packages..." -ForegroundColor Cyan
 foreach (`$pkg in `$requiredPackages) {
     `$result = & `$venvPip show `$pkg 2>`$null
     if (`$LASTEXITCODE -ne 0) {
-        Write-Host "    [FAIL] `$pkg - NOT INSTALLED" -ForegroundColor Red
+        Write-Host "      [FAIL] `$pkg - NOT INSTALLED" -ForegroundColor Red
         `$packagesOK = `$false
     } else {
-        Write-Host "    [OK] `$pkg" -ForegroundColor Green
+        Write-Host "      [OK] `$pkg" -ForegroundColor Green
     }
 }
 
 if (-not `$packagesOK) {
     Write-Host ""
-    Write-Host "[!] ERROR: Required packages are missing!" -ForegroundColor Red
-    Write-Host "    Please run the setup script again:" -ForegroundColor Yellow
-    Write-Host "    .\PPM-QuPath.ps1" -ForegroundColor White
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "  ERROR: Required packages are missing" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  One or more Python packages failed verification." -ForegroundColor White
+    Write-Host "  This usually means the initial setup did not complete." -ForegroundColor White
+    Write-Host ""
+    Write-Host "  To fix, re-run the setup script:" -ForegroundColor Yellow
+    Write-Host "    .\PPM-QuPath.ps1" -ForegroundColor Cyan
     Write-Host ""
     Read-Host "Press Enter to exit"
     exit 1
 }
 
-Write-Host "    All packages verified" -ForegroundColor Green
+Write-Host "      All packages verified" -ForegroundColor Green
 Write-Host ""
 
-# Test if Python can import the server module
-Write-Host "[+] Testing server module import..." -ForegroundColor Cyan
-`$importTest = & `$venvPython -c "import microscope_command_server.server.qp_server; print('OK')" 2>&1
+# --- Step 2: Test that the package can be imported ---
+Write-Host "[2/3] Testing Python module import..." -ForegroundColor Cyan
+`$importTest = & `$venvPython -c "import microscope_command_server; print('OK')" 2>&1
 if (`$LASTEXITCODE -ne 0) {
-    Write-Host "    [FAIL] Cannot import microscope_command_server module" -ForegroundColor Red
+    Write-Host "      [FAIL] Cannot import microscope_command_server" -ForegroundColor Red
     Write-Host ""
-    Write-Host "Error details:" -ForegroundColor Yellow
-    Write-Host `$importTest -ForegroundColor Gray
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "  ERROR: Python import failed" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
     Write-Host ""
-    Write-Host "    Please run the setup script again:" -ForegroundColor Yellow
-    Write-Host "    .\PPM-QuPath.ps1" -ForegroundColor White
+    Write-Host "  The package is installed but Python cannot load it." -ForegroundColor White
+    Write-Host "  This may indicate a dependency conflict or corrupt install." -ForegroundColor White
+    Write-Host ""
+    Write-Host "  Error details:" -ForegroundColor Yellow
+    Write-Host "  `$importTest" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  To fix, try re-running setup:" -ForegroundColor Yellow
+    Write-Host "    .\PPM-QuPath.ps1" -ForegroundColor Cyan
     Write-Host ""
     Read-Host "Press Enter to exit"
     exit 1
 } else {
-    Write-Host "    Server module import successful" -ForegroundColor Green
+    Write-Host "      Import successful" -ForegroundColor Green
 }
 
 Write-Host ""
 
-# Start microscope server in new window
-Write-Host "[+] Starting microscope server..." -ForegroundColor Green
-Write-Host "    The server will open in a new window showing its output" -ForegroundColor Cyan
+# --- Step 3: Start the server ---
+Write-Host "[3/3] Starting microscope command server..." -ForegroundColor Cyan
+Write-Host "      The server will open in a new window." -ForegroundColor White
 Write-Host ""
-`$venvPython = "$InstallDir\venv_qpsc\Scripts\python.exe"
+Write-Host "      NOTE: Micro-Manager must be running before the server" -ForegroundColor Yellow
+Write-Host "      can connect. If it is not running yet, start it now --" -ForegroundColor Yellow
+Write-Host "      the server will retry the connection." -ForegroundColor Yellow
+Write-Host ""
 
-# Start server in new window so user can see output (port, errors, status)
 Start-Process -FilePath `$venvPython -ArgumentList "-m", "microscope_command_server.server.qp_server"
 
-# Wait for server to initialize
-Write-Host "Waiting for server to start..."
-Start-Sleep -Seconds 3
+Start-Sleep -Seconds 2
 
-# Launch QuPath if requested
-if (`$args -contains "--qupath") {
-    Write-Host "[+] Launching QuPath..." -ForegroundColor Green
+# --- Launch QuPath ---
+if (-not `$NoQuPath) {
     `$quPathExe = "$quPathExe"
     if (`$quPathExe -and (Test-Path `$quPathExe)) {
+        Write-Host "[+] Launching QuPath..." -ForegroundColor Green
         Start-Process `$quPathExe
-    } elseif (-not `$quPathExe) {
-        Write-Host "[!] QuPath path not configured in launcher script" -ForegroundColor Yellow
-        Write-Host "    Please specify QuPath path manually or re-run setup with -QuPathDir parameter" -ForegroundColor Yellow
     } else {
-        Write-Host "[!] QuPath not found at: `$quPathExe" -ForegroundColor Red
+        Write-Host "[!] QuPath not found - please launch it manually" -ForegroundColor Yellow
+        if (`$quPathExe) {
+            Write-Host "    Expected at: `$quPathExe" -ForegroundColor Gray
+        }
+        Write-Host "    To configure, re-run: .\PPM-QuPath.ps1 -QuPathDir ""C:\path\to\QuPath""" -ForegroundColor Gray
     }
 }
 
 Write-Host ""
-Write-Host "QPSC System Started" -ForegroundColor Green
-Write-Host "  - Microscope server is running in separate window" -ForegroundColor White
-Write-Host "  - Check the server window for:" -ForegroundColor White
-Write-Host "    * Port number (default: 5000)" -ForegroundColor Gray
-Write-Host "    * Connection status" -ForegroundColor Gray
-Write-Host "    * Error messages (if any)" -ForegroundColor Gray
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "  QPSC System Started" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  - To stop the server: Close the server window or press Ctrl+C in that window" -ForegroundColor White
+Write-Host "  Server: running in separate window" -ForegroundColor White
+Write-Host "  To stop: close the server window or Ctrl+C" -ForegroundColor White
 Write-Host ""
 
-# Keep script running
 Read-Host "Press Enter to exit launcher (server will continue running)"
 "@
 
@@ -1128,7 +1158,10 @@ $summaryContent += @"
 2. Set Up Micro-Manager Device Adapters
 
 3. Launch QPSC:
-   $launcherPath --qupath
+   $launcherPath
+
+   Server-only (no QuPath):
+   $launcherPath --no-qupath
 
    3b. If QuPath is in a non-standard location:
        Re-run setup with -QuPathDir parameter:
@@ -1275,15 +1308,14 @@ if ($Development) {
     Write-Host "     start_server.bat  - Start the microscope command server" -ForegroundColor Gray
     Write-Host "     update_env.bat    - Pull updates and reinstall packages" -ForegroundColor Gray
 } else {
-    Write-Host "  Launch QPSC:" -ForegroundColor White
-    Write-Host "     $launcherPath --qupath" -ForegroundColor Yellow
+    Write-Host "  Launch QPSC (starts server + QuPath):" -ForegroundColor White
+    Write-Host "     $launcherPath" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "     Server only (no QuPath):" -ForegroundColor White
+    Write-Host "     $launcherPath --no-qupath" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "     If QuPath is in a non-standard location:" -ForegroundColor White
     Write-Host "         .\PPM-QuPath.ps1 -QuPathDir ""D:\YourPath\QuPath-0.6.0""" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  Or manually:" -ForegroundColor White
-    Write-Host "     python -m microscope_command_server.server.qp_server  # Start server" -ForegroundColor Yellow
-    Write-Host "     QuPath.exe                                    # Start QuPath" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -1291,5 +1323,5 @@ Write-Host ""
 # Launch if requested
 if ($Launch) {
     Write-Host "[+] Launching QPSC..." -ForegroundColor Green
-    & $launcherPath --qupath
+    & $launcherPath
 }
