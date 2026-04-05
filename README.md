@@ -28,6 +28,7 @@ flowchart TB
         direction LR
         SRV["Command Server"]
         CTRL["Hardware Control"]
+        IMP["Image Processing"]
         PPM["PPM Library"]
     end
 
@@ -43,14 +44,16 @@ flowchart TB
 
     QP ==>|"Socket Commands"| SRV
     SRV --> CTRL
-    SRV --> PPM
+    SRV --> IMP
+    SRV -.-> PPM
     CTRL -->|"Python API"| PM
     PM -->|"Java Bridge"| MM
     MM -->|"Device Control"| HW
 
     HW -.->|"Images"| CTRL
-    CTRL -.->|"Processing"| PPM
-    PPM -.->|"Processed images"| SRV
+    CTRL -.->|"Debayering"| IMP
+    IMP -.->|"Corrected tiles"| SRV
+    PPM -.->|"PPM analysis"| SRV
     SRV -.->|"Raw tiles"| T2P
     T2P -.->|"Stitched OME-ZARR"| QP
 
@@ -58,7 +61,8 @@ flowchart TB
     style T2P fill:#4A90D9,color:#fff
     style SRV fill:#306998,color:#fff
     style CTRL fill:#4A7DB8,color:#fff
-    style PPM fill:#4A7DB8,color:#fff
+    style IMP fill:#4A7DB8,color:#fff
+    style PPM fill:#7B8D8E,color:#fff
     style PM fill:#E67E22,color:#fff
     style MM fill:#D35400,color:#fff
     style HW fill:#C0392B,color:#fff
@@ -67,6 +71,7 @@ flowchart TB
     click T2P "https://github.com/uw-loci/qupath-extension-tiles-to-pyramid" "Tiles-to-Pyramid Extension Repository"
     click SRV "https://github.com/uw-loci/microscope_command_server" "Command Server Repository"
     click CTRL "https://github.com/uw-loci/microscope_control" "Hardware Control Repository"
+    click IMP "https://github.com/uw-loci/microscope_imageprocessing" "Image Processing Repository"
     click PPM "https://github.com/uw-loci/ppm_library" "PPM Library Repository"
     click PM "https://pycro-manager.readthedocs.io/" "Pycro-Manager Documentation"
     click MM "https://micro-manager.org/" "Micro-Manager Website"
@@ -118,7 +123,8 @@ flowchart LR
 |------------|-------------|----------|
 | [microscope_command_server](https://github.com/uw-loci/microscope_command_server) | Socket server for QuPath-to-microscope communication and acquisition workflows | Python |
 | [microscope_control](https://github.com/uw-loci/microscope_control) | Hardware abstraction layer via Pycromanager/Micro-Manager | Python |
-| [ppm_library](https://github.com/uw-loci/ppm_library) | Image processing library for PPM and general microscopy imaging | Python |
+| [microscope_imageprocessing](https://github.com/uw-loci/microscope_imageprocessing) | General image processing: debayering, background correction, TIFF I/O, Z-stack projections | Python |
+| [ppm_library](https://github.com/uw-loci/ppm_library) | Polarized light microscopy (PPM) calibration and analysis | Python |
 | [microscope_configurations](https://github.com/uw-loci/microscope_configurations) | YAML configuration templates for microscope systems | YAML |
 
 ### Supporting Tools
