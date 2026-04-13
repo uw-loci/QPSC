@@ -162,8 +162,11 @@ QPSC supports multiple imaging modalities through a pluggable architecture:
 |----------|-------------|--------|
 | **PPM** (Polarized Light) | Multi-angle polarization microscopy for birefringent samples (via [qupath-extension-ppm](https://github.com/uw-loci/qupath-extension-ppm)) | Active |
 | **Brightfield** | Standard transmitted light imaging | Active |
-| **Widefield Fluorescence** | Multi-channel widefield fluorescence imaging | Planned |
+| **Widefield Immunofluorescence** | Multi-channel widefield fluorescence imaging driven by a vendor-agnostic channel library (any ConfigGroup preset or device property can define a channel) | Active |
+| **Brightfield + IF (BF+IF)** | Combined BF and fluorescence acquisition on single-camera scopes -- the BF step is expressed as a regular entry in the channel library | Active |
 | **Point Scanning** | Laser scanning modalities including two-photon, SHG, and single-photon confocal (via LaserScanningModalityHandler) | Beta |
+
+Learn more about the multi-channel IF and BF+IF design, YAML schema, and an end-to-end worked example in **[docs/multichannel-if-overview.md](docs/multichannel-if-overview.md)**.
 
 ## Installation
 

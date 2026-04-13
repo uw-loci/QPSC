@@ -514,8 +514,11 @@ public interface ModalityHandler {
 |----------|---------|--------|
 | **PPM** (Polarized Light) | `PPMModalityHandler` | Tested and validated |
 | **Brightfield** | `NoOpModalityHandler` | Tested (single-angle, no rotation) |
+| **Widefield Immunofluorescence** | `WidefieldFluorescenceModalityHandler` | Active -- vendor-agnostic channel library |
+| **Brightfield + IF (BF+IF)** | `BfIfModalityHandler` | Active -- single-camera BF+IF, BF is the first channel in the library |
 | **Multiphoton/SHG** | `MultiphotonModalityHandler` | Code exists, untested on hardware |
-| **Widefield Fluorescence** | -- | Planned |
+
+The widefield fluorescence and BF+IF handlers share one code path built on a vendor-agnostic channel library. A channel is a data-driven description (id, display name, default exposure, ordered `mm_setup_presets`, ordered `device_properties` writes, optional `settle_ms`) that the base layer forwards verbatim to the Micro-Manager core via `core.setConfig` and `core.setProperty`. No vendor-specific code exists in the Java or Python acquisition loop. `BfIfModalityHandler` extends the widefield handler without adding a new acquisition path -- the BF step is just the first entry in the channel library and is iterated identically to every fluorescence channel. See **[multichannel-if-overview.md](multichannel-if-overview.md)** for the full design, YAML schema, and an OWS3 worked example.
 
 ### Adding New Modalities
 
@@ -696,7 +699,7 @@ QuPath Project
 
 - **Appose integration**: Replace socket-based Python server with embedded Python via Appose, collapsing the three-process architecture to a single QuPath application
 - **PyMMCore+ backend**: Direct Python bindings to CMMCore without requiring a running Micro-Manager GUI process
-- **Additional modalities**: Widefield fluorescence, point scanning (two-photon, SHG, confocal)
+- **Additional modalities**: Point scanning (two-photon, SHG, confocal) validation on hardware
 
 ---
 
