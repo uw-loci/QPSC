@@ -132,7 +132,7 @@ flowchart LR
 | Repository | Description |
 |------------|-------------|
 | [qupath-extension-dl-pixel-classifier](https://github.com/uw-loci/qupath-extension-dl-pixel-classifier) | Deep learning pixel classification with embedded Python (UNet, MuViT, ONNX) |
-| [qupath-extension-cluster-analysis-tools](https://github.com/uw-loci/qupath-extension-cluster-analysis-tools) | Python-powered clustering and phenotyping for multiplexed imaging |
+| [qupath-extension-cell-analysis-tools](https://github.com/uw-loci/qupath-extension-cell-analysis-tools) | Python-powered clustering and phenotyping for multiplexed imaging |
 | [qupath-extension-ocr4labels](https://github.com/uw-loci/qupath-extension-ocr4labels) | OCR for slide label text extraction |
 | [qupath-extension-dialog-manager](https://github.com/uw-loci/qupath-extension-dialog-manager) | Automatic dialog window position tracking and persistence across sessions |
 | [qupath-extension-project-metadata-browser](https://github.com/uw-loci/qupath-extension-project-metadata-browser) | Browse, filter, sort, and edit metadata for every image in a QuPath project in a single table view |
