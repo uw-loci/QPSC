@@ -6,7 +6,8 @@ param(
     [switch]$Development,
     [string]$QuPathDir = "$env:USERPROFILE\QuPath",
     [switch]$SkipQuPath,
-    [switch]$Launch
+    [switch]$Launch,
+    [string]$PythonExe
 )
 
 $setupMode = if ($Development) { "Development" } else { "Production" }
@@ -47,16 +48,91 @@ if ($Development) {
     }
 }
 
-# Check for Python
+# Check for Python.
+#
+# Do NOT wrap a native command in try/catch to test for it: try/catch only traps
+# PowerShell *terminating* errors, and an .exe that exits nonzero is not one. The
+# old code did exactly that, so when 'python' resolved to the Microsoft Store stub
+# the catch never fired, the version string came back empty, and setup carried on
+# to die later at venv creation with "ensure Python venv module is available" --
+# a wrong diagnosis that sent people looking at venv instead of at PATH.
 Write-Host "[+] Checking Python installation..." -ForegroundColor Cyan
-try {
-    $pythonVersion = python --version
-    Write-Host "    Found: $pythonVersion" -ForegroundColor Green
-} catch {
-    Write-Host "[!] Python not found - please install Python 3.9+ from https://www.python.org/" -ForegroundColor Red
-    Write-Host "    Make sure to check 'Add Python to PATH' during installation" -ForegroundColor Yellow
+
+$storeStubSeen = $false
+
+function Find-Python {
+    param([string]$Explicit)
+
+    $candidates = if ($Explicit) { @($Explicit) } else { @("python", "python3", "py") }
+
+    foreach ($candidate in $candidates) {
+        $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
+        if (-not $cmd) { continue }
+
+        # Windows puts stub launchers in WindowsApps whose only job is to
+        # advertise the Microsoft Store. They resolve exactly like a real
+        # python.exe, so reject them by path instead of by running them.
+        if ($cmd.Source -like "*\WindowsApps\*") {
+            $script:storeStubSeen = $true
+            continue
+        }
+
+        $reported = (& $candidate --version 2>&1 | Out-String)
+        if ($LASTEXITCODE -ne 0) { continue }
+        if ($reported -notmatch "Python\s+(\d+)\.(\d+)") { continue }
+
+        return [pscustomobject]@{
+            Path  = $cmd.Source
+            Major = [int]$Matches[1]
+            Minor = [int]$Matches[2]
+            Text  = $reported.Trim()
+        }
+    }
+    return $null
+}
+
+$python = Find-Python -Explicit $PythonExe
+
+if (-not $python) {
+    if ($PythonExe) {
+        Write-Host "[!] -PythonExe '$PythonExe' is not a usable Python interpreter." -ForegroundColor Red
+    } else {
+        Write-Host "[!] No usable Python found on PATH." -ForegroundColor Red
+    }
+    if ($storeStubSeen) {
+        Write-Host "    'python' here resolves to the Microsoft Store stub in WindowsApps," -ForegroundColor Yellow
+        Write-Host "    which is not a real Python - it only prints an advert and exits." -ForegroundColor Yellow
+    }
+    Write-Host "" -ForegroundColor Yellow
+    Write-Host "    Common causes:" -ForegroundColor Yellow
+    Write-Host "      - Anaconda is installed but not on PATH. Its installer leaves it off" -ForegroundColor Yellow
+    Write-Host "        by default. Use the 'Anaconda PowerShell Prompt' from the Start menu," -ForegroundColor Yellow
+    Write-Host "        or run 'conda init powershell' once and restart PowerShell." -ForegroundColor Yellow
+    Write-Host "      - No Python installed. Get 3.10+ from https://www.python.org/ and tick" -ForegroundColor Yellow
+    Write-Host "        'Add Python to PATH' during installation." -ForegroundColor Yellow
+    Write-Host "" -ForegroundColor Yellow
+    Write-Host "    Or point this script straight at an interpreter:" -ForegroundColor Yellow
+    Write-Host "      .\PPM-QuPath.ps1 -PythonExe 'C:\Users\you\anaconda3\python.exe'" -ForegroundColor Yellow
+    if ($storeStubSeen) {
+        Write-Host "" -ForegroundColor Yellow
+        Write-Host "    To stop the stub shadowing a real Python: Settings > Apps > Advanced" -ForegroundColor Yellow
+        Write-Host "    app settings > App execution aliases > turn off python.exe/python3.exe." -ForegroundColor Yellow
+    }
     exit 1
 }
+
+# All four microscope packages declare requires-python >= 3.10. Fail here with a
+# clear message rather than deep inside a pip resolution error.
+if ($python.Major -lt 3 -or ($python.Major -eq 3 -and $python.Minor -lt 10)) {
+    Write-Host "[!] Found $($python.Text) at $($python.Path)" -ForegroundColor Red
+    Write-Host "    QPSC needs Python 3.10 or newer." -ForegroundColor Yellow
+    Write-Host "    With Anaconda: conda create -n qpsc python=3.12, then activate it." -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "    Found: $($python.Text)" -ForegroundColor Green
+Write-Host "    Using: $($python.Path)" -ForegroundColor DarkGray
+$pythonExePath = $python.Path
 
 # Install Python packages
 Write-Host ""
@@ -101,7 +177,7 @@ if ($Development) {
     $venvPath = Join-Path $InstallDir "venv_qpsc"
     if (-not (Test-Path $venvPath)) {
         Write-Host "[+] Creating virtual environment: venv_qpsc" -ForegroundColor Green
-        python -m venv $venvPath
+        & $pythonExePath -m venv $venvPath
     } else {
         Write-Host "[!] Virtual environment exists (skipping creation)" -ForegroundColor Yellow
     }
@@ -157,7 +233,7 @@ if ($Development) {
     $venvPath = Join-Path $InstallDir "venv_qpsc"
     if (-not (Test-Path $venvPath)) {
         Write-Host "[+] Creating virtual environment: venv_qpsc" -ForegroundColor Green
-        python -m venv $venvPath
+        & $pythonExePath -m venv $venvPath
 
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[!] Failed to create virtual environment" -ForegroundColor Red
