@@ -243,7 +243,12 @@ For users who want to use QPSC without modifying code:
 
 > **PowerShell version:** The script requires PowerShell 5.1+, which is included with Windows 10 and later. You should not need to install anything extra. If you get errors about unrecognized commands, check your version with `$PSVersionTable.PSVersion`.
 >
-> **Execution policy:** If you get a "cannot be loaded because running scripts is disabled" error, run: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` and try again.
+> **Execution policy:** PowerShell blocks the script in two different ways, and the fixes are different. Read which message you got:
+>
+> - "cannot be loaded because **running scripts is disabled** on this system" -- your policy is `Restricted`. Run `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` and try again.
+> - "the file ... **is not digitally signed**" -- your policy is already fine; PowerShell is refusing the file because it was downloaded from the internet. Run `Unblock-File .\PPM-QuPath.ps1` and try again. **Do not** change your execution policy for this one, it will not help. If you unpacked a ZIP, clear every file at once with `Get-ChildItem -Recurse | Unblock-File`.
+>
+> If neither works, see [Setup Script Issues](docs/troubleshooting.md#powershell-execution-policy-error) -- a managed/campus machine may be enforcing a policy you cannot override.
 
 **2. Navigate to your home directory** (avoid System32!):
 ```powershell

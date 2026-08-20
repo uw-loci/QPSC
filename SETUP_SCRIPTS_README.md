@@ -268,6 +268,19 @@ PowerShell execution policy is blocking the script. Run:
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
+### "The file ... is not digitally signed"
+
+A *different* problem with a similar-sounding message -- and the fix above does not solve it. Your
+policy is already `RemoteSigned`; it is refusing the script because Windows flagged it as
+downloaded from the internet. Clear the flag:
+```powershell
+Unblock-File .\PPM-QuPath.ps1
+```
+If you unpacked a ZIP, every file inside carries the flag: `Get-ChildItem -Recurse | Unblock-File`.
+On a managed machine where this still fails, see
+[troubleshooting.md](docs/troubleshooting.md#powershell-execution-policy-error) for the Group
+Policy case.
+
 ### "Python not found"
 
 Python is not in your PATH. Either:

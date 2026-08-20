@@ -194,13 +194,46 @@ lsof -i :5000
 
 ### PowerShell execution policy error
 
-**Symptoms:** "cannot be loaded because running scripts is disabled" error.
+Two different policies block the script with two different messages. **Read which one you got:
+the standard fix for the first is what produces the second**, so following it twice gets you
+nowhere.
 
-**Solution:**
+**Symptom A:** "cannot be loaded because **running scripts is disabled** on this system."
+
+Your policy is `Restricted`. Relax it for your own account only:
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
-Then retry the setup script.
+
+**Symptom B:** "the file ... **is not digitally signed**. You cannot run this script on the
+current system."
+
+Your policy is *already* `RemoteSigned` (often because you just followed the advice above), and
+that policy refuses unsigned scripts that carry a Mark of the Web -- the flag Windows attaches to
+anything downloaded from the internet. Changing the execution policy again will not help. Strip
+the flag instead:
+```powershell
+Unblock-File .\PPM-QuPath.ps1
+```
+Unpacked a ZIP? Every extracted file carries the flag: `Get-ChildItem -Recurse | Unblock-File`.
+
+**Diagnosing which:**
+```powershell
+Get-ExecutionPolicy -List                          # which scope sets what
+Get-Item .\PPM-QuPath.ps1 -Stream Zone.Identifier  # errors = no Mark of the Web
+```
+
+**On a managed or campus machine**, check the *scope* column. If `AllSigned` appears under
+`MachinePolicy` or `UserPolicy`, it comes from Group Policy and **outranks both
+`Set-ExecutionPolicy` at every scope and the `-ExecutionPolicy Bypass` flag** -- most advice you
+will find online silently fails here. Execution policy governs loading script *files*, so load the
+script as text instead:
+```powershell
+& ([scriptblock]::Create((Get-Content -Raw .\PPM-QuPath.ps1))) -InstallDir "C:\QPSC"
+```
+Named parameters pass through normally. If that also fails with "Method invocation is supported
+only on core types", the machine enforces WDAC/AppLocker and PowerShell is in Constrained Language
+Mode; at that point ask IT to sign the script into Trusted Publishers.
 
 ### PowerShell version
 
