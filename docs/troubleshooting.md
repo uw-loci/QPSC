@@ -192,6 +192,73 @@ lsof -i :5000
 
 ## Setup Script Issues
 
+### Setup script opens in a text editor instead of running
+
+**Symptoms:** you type `.\PPM-QuPath.ps1 ...` and Notepad (or your editor) opens the script.
+No error, no output.
+
+You are in `cmd.exe`, not PowerShell. cmd cannot run a `.ps1`; it asks Windows to open the file,
+and Windows associates `.ps1` with an editor on purpose so that double-clicking a script cannot
+execute it. Nothing is broken.
+
+**Anaconda Prompt is cmd** -- this is the usual way people land here. Check the prompt:
+
+```
+PS C:\qpsc-extension>          <- PowerShell: correct
+C:\qpsc-extension>             <- cmd: opens an editor
+(base) C:\qpsc-extension>      <- Anaconda Prompt, still cmd
+```
+
+**Solution:** use **Anaconda PowerShell Prompt** (a separate Start-menu entry from **Anaconda
+Prompt**), or hand the script to PowerShell from the cmd window you already have -- which keeps
+your activated conda environment, because the child process inherits its PATH:
+
+```
+powershell -NoProfile -File PPM-QuPath.ps1 -InstallDir "C:\QPSC"
+```
+
+### "Python was not found" / Anaconda is installed but not detected
+
+**Symptoms:**
+```
+[+] Checking Python installation...
+Python was not found; run without arguments to install from the Microsoft Store...
+```
+
+Two causes stack here:
+
+1. **Anaconda is not on PATH.** Its installer leaves "Add Anaconda to my PATH" unchecked by
+   default and expects you to use Anaconda Prompt or run `conda init`. So bare `python` in an
+   ordinary PowerShell window is not Anaconda's Python.
+2. **Windows fills the gap with a decoy.** `%LOCALAPPDATA%\Microsoft\WindowsApps` is on PATH by
+   default and holds a stub `python.exe` whose only job is to print that Store advert. The
+   message is Microsoft's, not Python's and not ours.
+
+**Solutions**, any one of:
+
+```powershell
+# Use the conda environment (see Prerequisites for why 3.12)
+conda create -n qpsc -c conda-forge python=3.12 -y
+conda activate qpsc
+
+# Or make conda available in ordinary PowerShell from now on
+conda init powershell        # then restart PowerShell
+
+# Or point the script straight at an interpreter, bypassing PATH entirely
+.\PPM-QuPath.ps1 -PythonExe "C:\Users\you\anaconda3\envs\qpsc\python.exe"
+```
+
+Turning off the aliases under **Settings > Apps > Advanced app settings > App execution
+aliases** (`python.exe`, `python3.exe`) stops the decoy shadowing a real interpreter. Worth doing
+regardless, but on its own it will not put Anaconda on PATH.
+
+> **Older copies of the setup script mis-report this.** Before the fix, the Python check wrapped
+> `python --version` in `try/catch`. `try/catch` traps only PowerShell *terminating* errors, and a
+> native `.exe` exiting nonzero is not one -- so the check silently passed with an empty version
+> (the giveaway is `Found:` with nothing after it) and setup ran on to fail later at venv creation
+> with "Please ensure Python venv module is available". That message is a red herring: venv is
+> fine, there is no Python. Re-download the script if you see it.
+
 ### PowerShell execution policy error
 
 Two different policies block the script with two different messages. **Read which one you got:

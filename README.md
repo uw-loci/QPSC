@@ -206,10 +206,27 @@ Install these foundational **software** components **in this order** before QPSC
 - **Note**: Install before QPSC extensions
 
 #### 3. Python (Microscope Control Server)
-- **Version**: Python 3.10 or later (3.12 recommended)
+- **Version**: Python 3.10-3.12, and **3.12 is the one to pick**. That is not "newest wins" --
+  3.12 is the newest version the four Python packages are actually tested against
+  (`python-version: ["3.10", "3.11", "3.12"]` in each repo's `.github/workflows/tests.yml`).
+  3.13 and 3.14 may well work but nothing has been run against them; `pycromanager` is the
+  dependency most likely to object. On an instrument that runs acquisitions, tested beats new.
 - **Purpose**: Runtime for microscope control server
-- **Installation**: [Python Download](https://www.python.org/downloads/)
-- **Windows Note**: Check "Add Python to PATH" during installation
+- **Windows, Anaconda already installed** (common on scope PCs) -- make a dedicated environment.
+  Do **not** upgrade `base`: conda itself lives there, so a half-finished solve leaves you
+  repairing conda with conda. A new env is disposable (`conda env remove -n qpsc`).
+  ```
+  conda create -n qpsc -c conda-forge python=3.12 -y
+  conda activate qpsc
+  python --version
+  ```
+- **Windows, no Anaconda**: [Python Download](https://www.python.org/downloads/), and check
+  **"Add Python to PATH"** during installation.
+- **Note on 3.12 downloads:** 3.12 is in its security-fix-only phase, and 3.12.10 was the last
+  release with a binary installer -- python.org will not offer anything newer in the 3.12 line.
+  For a fixed instrument environment that is a feature, not a problem: no behaviour churn, and
+  security fixes continue until October 2028. But it does mean conda (which ships its own
+  maintained 3.12 builds) is the easier route on Windows if you want to stay patched.
 
 #### 4. Windows Media Feature Pack (Windows N/KN Editions Only)
 
@@ -241,6 +258,26 @@ For users who want to use QPSC without modifying code:
 
 **1. Open PowerShell** (Run as Administrator recommended)
 
+> **Which shell -- this one fails silently.** The setup script is a PowerShell script. Run it
+> from `cmd.exe` and Windows will **open it in a text editor instead of running it**, with no
+> error and no clue as to why. That is a deliberate Windows default (so double-clicking a
+> script cannot execute it), not a fault in the script. **Anaconda Prompt is `cmd`**, so it
+> hits this. Check the prompt:
+>
+> ```
+> PS C:\qpsc-extension>          <- PowerShell: correct
+> C:\qpsc-extension>             <- cmd: the script will open in an editor
+> (base) C:\qpsc-extension>      <- Anaconda Prompt, still cmd
+> ```
+>
+> Anaconda users: choose **Anaconda PowerShell Prompt** from the Start menu, not **Anaconda
+> Prompt** -- they are two different entries. Or, from an Anaconda Prompt you already have open
+> (which keeps whatever environment you activated), hand just the script to PowerShell:
+>
+> ```
+> powershell -NoProfile -File PPM-QuPath.ps1 -InstallDir "C:\QPSC"
+> ```
+>
 > **PowerShell version:** The script requires PowerShell 5.1+, which is included with Windows 10 and later. You should not need to install anything extra. If you get errors about unrecognized commands, check your version with `$PSVersionTable.PSVersion`.
 >
 > **Execution policy:** PowerShell blocks the script in two different ways, and the fixes are different. Read which message you got:
