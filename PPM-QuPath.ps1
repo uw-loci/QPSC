@@ -458,7 +458,7 @@ if (-not $SkipQuPath) {
         # Try multiple QuPath executable locations
         $possibleExes = @(
             "$path\QuPath.exe",           # Standard location
-            "$path\QuPath-*.exe",         # Versioned executable (e.g., QuPath-0.6.0.exe)
+            "$path\QuPath-*.exe",         # Versioned executable (e.g., QuPath-0.7.0.exe)
             "$path\bin\QuPath.exe"        # Alternative location
         )
 
@@ -486,9 +486,9 @@ if (-not $SkipQuPath) {
         Write-Host "    You can continue setup without QuPath auto-detection." -ForegroundColor Yellow
         Write-Host ""
         Write-Host "    To use QuPath with QPSC later:" -ForegroundColor Yellow
-        Write-Host "      1. Install QuPath 0.6.0+ from: https://qupath.github.io/" -ForegroundColor Cyan
+        Write-Host "      1. Install QuPath 0.7.0+ from: https://qupath.github.io/" -ForegroundColor Cyan
         Write-Host "      2. Or re-run this script with -QuPathDir parameter pointing to your QuPath installation" -ForegroundColor Cyan
-        Write-Host "         Example: .\PPM-QuPath.ps1 -QuPathDir 'C:\path\to\QuPath-0.6.0'" -ForegroundColor Gray
+        Write-Host "         Example: .\PPM-QuPath.ps1 -QuPathDir 'C:\path\to\QuPath-0.7.0'" -ForegroundColor Gray
         Write-Host ""
         $openDownloadPage = Read-Host "    Would you like to open the QuPath download page now? (y/n)"
         if ($openDownloadPage -eq 'y') {
@@ -496,6 +496,57 @@ if (-not $SkipQuPath) {
         }
         Write-Host ""
         Write-Host "    Continuing setup..." -ForegroundColor Cyan
+    }
+
+    # Warn when the QuPath we found is too old for the extension.
+    #
+    # SetupScope declares Version.parse("v0.7.0") and the QPSC catalog pins the
+    # current release to min v0.7.0, so on 0.6.x the extension simply will not
+    # load. Without this check the JAR copy below still succeeds, so the install
+    # looks fine right up until QuPath starts without QPSC in the menu.
+    if ($quPathExe) {
+        $quPathVersion = $null
+
+        # Preferred: read the version off the executable itself.
+        try {
+            $productVersion = (Get-Item $quPathExe -ErrorAction Stop).VersionInfo.ProductVersion
+            if ($productVersion -match "(\d+)\.(\d+)") {
+                $quPathVersion = [pscustomobject]@{
+                    Major = [int]$Matches[1]
+                    Minor = [int]$Matches[2]
+                    Text  = $productVersion.Trim()
+                }
+            }
+        } catch {
+            # No version resource; fall through to the path hint.
+        }
+
+        # Fallback: MSI installs are named QuPath-<major>.<minor>.<patch>.
+        if (-not $quPathVersion) {
+            foreach ($hint in @($quPathExe, $QuPathDir)) {
+                if ($hint -and $hint -match "QuPath-(\d+)\.(\d+)") {
+                    $quPathVersion = [pscustomobject]@{
+                        Major = [int]$Matches[1]
+                        Minor = [int]$Matches[2]
+                        Text  = "$($Matches[1]).$($Matches[2]) (inferred from the install path)"
+                    }
+                    break
+                }
+            }
+        }
+
+        if ($quPathVersion -and $quPathVersion.Major -eq 0 -and $quPathVersion.Minor -lt 7) {
+            Write-Host ""
+            Write-Host "    [!] This QuPath looks like $($quPathVersion.Text) - QPSC needs 0.7.0 or newer." -ForegroundColor Red
+            Write-Host "        The extension will NOT load in 0.6.x. Setup will still copy the JARs," -ForegroundColor Yellow
+            Write-Host "        so this looks like it worked until QuPath starts without QPSC in the menu." -ForegroundColor Yellow
+            Write-Host "        Install QuPath 0.7.0+ from https://qupath.github.io/ then re-run with" -ForegroundColor Yellow
+            Write-Host "        -QuPathDir pointing at it." -ForegroundColor Yellow
+            Write-Host ""
+        } elseif ($quPathVersion) {
+            Write-Host "    QuPath version: $($quPathVersion.Text)" -ForegroundColor DarkGray
+        }
+        # Version undeterminable: say nothing rather than guess at it.
     }
 
     if ($Development) {
@@ -1252,7 +1303,7 @@ $summaryContent += @"
 
    3b. If QuPath is in a non-standard location:
        Re-run setup with -QuPathDir parameter:
-       .\PPM-QuPath.ps1 -QuPathDir "D:\YourPath\QuPath-0.6.0"
+       .\PPM-QuPath.ps1 -QuPathDir "D:\YourPath\QuPath-0.7.0"
 
        Or manually copy extension JARs to your QuPath extensions folder
 
@@ -1402,7 +1453,7 @@ if ($Development) {
     Write-Host "     $launcherPath --no-qupath" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "     If QuPath is in a non-standard location:" -ForegroundColor White
-    Write-Host "         .\PPM-QuPath.ps1 -QuPathDir ""D:\YourPath\QuPath-0.6.0""" -ForegroundColor Yellow
+    Write-Host "         .\PPM-QuPath.ps1 -QuPathDir ""D:\YourPath\QuPath-0.7.0""" -ForegroundColor Yellow
 }
 
 Write-Host ""

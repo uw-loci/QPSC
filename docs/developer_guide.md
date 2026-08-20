@@ -20,7 +20,7 @@ This guide is for developers working on QPSC code, adding new features, or integ
 - **Python 3.9+**: For microscope control server
 - **Java 21+**: For QuPath extensions
 - **Micro-Manager 2.0+**: For hardware control
-- **QuPath 0.6.0+**: For running extensions
+- **QuPath 0.7.0+**: For running extensions
 
 ### Clone All Repositories
 

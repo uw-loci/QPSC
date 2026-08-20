@@ -187,7 +187,7 @@ python -m microscope_command_server.server.qp_server   # Module syntax
 Both modes require:
 
 - **Windows PowerShell 5.1+** or **PowerShell Core 7+**
-- **QuPath 0.6.0+** (required for running QPSC)
+- **QuPath 0.7.0+** (required for running QPSC -- the extension will not load on 0.6.x)
 - **Python 3.9+** with pip
 - **Micro-Manager 2.0+** (for hardware control)
 
@@ -199,7 +199,7 @@ Both modes require:
 
 **QuPath:**
 - Download from: https://qupath.github.io/
-- ✅ Install QuPath 0.6.0 or later
+- ✅ Install QuPath 0.7.0 or later
 - QuPath extensions will be installed to the QuPath extensions folder
 
 **Python:**

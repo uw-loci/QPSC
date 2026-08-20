@@ -17,13 +17,13 @@ This guide covers common issues encountered during QPSC installation and setup. 
    - Or download from: https://qupath.github.io/
 
 2. **Find your QuPath installation directory:**
-   - **Windows MSI install:** Usually `C:\Users\YourUsername\AppData\Local\QuPath-0.6.0\`
+   - **Windows MSI install:** Usually `C:\Users\YourUsername\AppData\Local\QuPath-0.7.0\`
    - **Windows portable:** Could be anywhere you extracted it
    - **macOS:** `/Applications/QuPath.app` or `~/Applications/QuPath.app`
 
 3. **Re-run setup script with QuPath location:**
    ```powershell
-   .\PPM-QuPath.ps1 -QuPathDir "C:\Users\YourUsername\AppData\Local\QuPath-0.6.0"
+   .\PPM-QuPath.ps1 -QuPathDir "C:\Users\YourUsername\AppData\Local\QuPath-0.7.0"
    ```
 
 4. **Or skip QuPath setup and install extensions manually:**
@@ -43,7 +43,7 @@ This guide covers common issues encountered during QPSC installation and setup. 
 5. Restart QuPath
 
 Common locations:
-- **Windows MSI:** `%LOCALAPPDATA%\QuPath-0.6.0\extensions\`
+- **Windows MSI:** `%LOCALAPPDATA%\QuPath-0.7.0\extensions\`
 - **Windows portable:** `%USERPROFILE%\QuPath\extensions\`
 - **macOS:** `~/Library/Application Support/QuPath/extensions/`
 - **Linux:** `~/.local/share/QuPath/extensions/`

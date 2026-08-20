@@ -200,7 +200,10 @@ Install these foundational **software** components **in this order** before QPSC
 - **Note**: Must be installed and tested before Python packages
 
 #### 2. QuPath (Digital Pathology Platform)
-- **Version**: 0.6.0+
+- **Version**: **0.7.0 or newer** -- QPSC declares `v0.7.0` as its target QuPath
+  (`SetupScope.java`, `EXTENSION_QUPATH_VERSION`) and the QPSC extension catalog pins the current
+  release to `min: v0.7.0`. On QuPath 0.6.x the extension will not load: the setup script still
+  copies the JARs, so it looks installed right up until QuPath starts without QPSC in the menu.
 - **Purpose**: Annotation interface and image analysis environment
 - **Installation**: [QuPath Download](https://qupath.github.io/)
 - **Note**: Install before QPSC extensions
@@ -321,7 +324,7 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/uw-loci/QPSC/main/PPM-
 
 **Custom QuPath location** (if not auto-detected):
 ```powershell
-.\PPM-QuPath.ps1 -QuPathDir "C:\path\to\QuPath-0.6.0"
+.\PPM-QuPath.ps1 -QuPathDir "C:\path\to\QuPath-0.7.0"
 ```
 
 > **Note:** The script automatically searches for QuPath in:
@@ -566,7 +569,7 @@ Download the latest JAR files from GitHub releases:
 
 Copy all JAR files to QuPath's extensions folder:
 
-- **Windows (MSI install)**: `C:\Users\[YourUsername]\AppData\Local\QuPath-0.6.0\extensions\`
+- **Windows (MSI install)**: `C:\Users\[YourUsername]\AppData\Local\QuPath-0.7.0\extensions\`
 - **Windows (portable)**: `C:\Users\[YourUsername]\QuPath\extensions\`
 - **macOS**: `~/Library/Application Support/QuPath/extensions/` or `~/QuPath/extensions/`
 - **Linux**: `~/.local/share/QuPath/extensions/` or `~/QuPath/extensions/`
