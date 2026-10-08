@@ -244,7 +244,7 @@ Install these foundational **software** components **in this order** before QPSC
 
 > **Most users can skip this.** Only needed if you want to build QuPath extensions from source code.
 
-- **Version**: Java 21+
+- **Version**: JDK 25. The build emits Java 21 bytecode, but QuPath 0.7.0's build artifacts need a JDK 25 to resolve
 - **Purpose**: Building QuPath extensions from source
 - **Installation**: [Adoptium Temurin](https://adoptium.net/)
 
@@ -485,19 +485,29 @@ These packages have dependencies on each other and must be installed in this exa
 
 **Option A: Install from GitHub (Users)**
 
-Installs the latest released versions from GitHub.
+Installs the current `main` branch of each package from GitHub.
 
-**1. Install PPM Library** (no QPSC dependencies):
+**1. Install Microscope Image Processing** (no QPSC dependencies):
+```bash
+pip install git+https://github.com/uw-loci/microscope_imageprocessing.git
+```
+
+**2. Install PPM Library** (optional, for PPM microscopes; depends on microscope_imageprocessing):
 ```bash
 pip install git+https://github.com/uw-loci/ppm_library.git
 ```
 
-**2. Install Microscope Control** (depends on ppm_library):
+**3. Install PolScope Library** (optional, for LC-PolScope microscopes; no QPSC dependencies):
+```bash
+pip install git+https://github.com/uw-loci/polscope_library.git
+```
+
+**4. Install Microscope Control** (depends on microscope_imageprocessing):
 ```bash
 pip install git+https://github.com/uw-loci/microscope_control.git
 ```
 
-**3. Install Microscope Command Server** (depends on both above):
+**5. Install Microscope Command Server** (depends on microscope_control and microscope_imageprocessing):
 ```bash
 pip install git+https://github.com/uw-loci/microscope_command_server.git
 ```
@@ -511,10 +521,26 @@ Navigate to a parent directory for repositories:
 cd /path/to/your/projects/
 ```
 
-**Clone and install ppm_library:**
+**Clone and install microscope_imageprocessing:**
+```bash
+git clone https://github.com/uw-loci/microscope_imageprocessing.git
+cd microscope_imageprocessing
+pip install -e .
+cd ..
+```
+
+**Clone and install ppm_library** (optional, for PPM microscopes):
 ```bash
 git clone https://github.com/uw-loci/ppm_library.git
 cd ppm_library
+pip install -e .
+cd ..
+```
+
+**Clone and install polscope_library** (optional, for LC-PolScope microscopes):
+```bash
+git clone https://github.com/uw-loci/polscope_library.git
+cd polscope_library
 pip install -e .
 cd ..
 ```
@@ -537,14 +563,15 @@ cd ..
 
 **Verify installation:**
 ```bash
-pip list | grep -E "(ppm-library|microscope-control|microscope-command-server)"
+pip list | grep -E "(ppm-library|microscope-imageprocessing|microscope-control|microscope-command-server)"
 ```
 
-Expected output:
+Expected output (version numbers will differ; the path column appears only for editable installs, Option B):
 ```
-microscope-command-server    1.0.0    /path/to/microscope_command_server
-microscope-control           1.0.0    /path/to/microscope_control
-ppm-library                  1.0.0    /path/to/ppm_library
+microscope-command-server    X.Y.Z    /path/to/microscope_command_server
+microscope-control           X.Y.Z    /path/to/microscope_control
+microscope-imageprocessing   X.Y.Z    /path/to/microscope_imageprocessing
+ppm-library                  X.Y.Z    /path/to/ppm_library
 ```
 
 **Troubleshooting:** See the [Python Package Installation](docs/troubleshooting.md#python-package-installation-issues) section of the troubleshooting guide.
@@ -745,11 +772,19 @@ See [Configuration Documentation](docs/configuration.md) for full details.
 ### Building from Source
 
 ```bash
+# The stitching extension must be in your local Maven repository first,
+# at the version qupath-extension-qpsc pins (0.7.1 at the time of writing)
+git clone https://github.com/uw-loci/qupath-extension-tiles-to-pyramid.git
+cd qupath-extension-tiles-to-pyramid
+git checkout v0.7.1
+./gradlew publishToMavenLocal
+cd ..
+
 # Clone the main extension
 git clone https://github.com/uw-loci/qupath-extension-qpsc.git
 cd qupath-extension-qpsc
 
-# Build (requires Java 21+)
+# Build (requires JDK 25)
 ./gradlew build
 
 # Run tests

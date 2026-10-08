@@ -35,36 +35,44 @@ tiles-to-pyramid
 (Stitching)" fillcolor="#7AB8F5" fontcolor=white]
 	}
 	subgraph cluster_python {
-		color="#306998" fillcolor="#E8F0F8" fontname="Helvetica Bold" fontsize=12 label="Python Microscope Control (pip packages)" style=filled
+		color="#306998" fillcolor="#E8F0F8" fontname="Helvetica Bold" fontsize=12 label="Python Microscope Control" style=filled
 		subgraph cluster_server {
 			color="#306998" fillcolor="#D4E4F4" label="microscope-command-server" style=filled
 			srv_socket [label="Socket Server
 (TCP/IP)" fillcolor="#306998" fontcolor=white]
 			srv_workflow [label="Acquisition Workflows
 (Orchestration)" fillcolor="#306998" fontcolor=white]
-			srv_pipeline [label="Processing Pipeline" fillcolor="#306998" fontcolor=white]
+			srv_pipeline [label="Tile Processing
+(Background Correction,
+White Balance)" fillcolor="#306998" fontcolor=white]
 		}
 		subgraph cluster_control {
 			color="#306998" fillcolor="#D4E4F4" label="microscope-control" style=filled
 			ctrl_hw [label="Hardware Abstraction
 (Stage, Camera)" fillcolor="#4A7DB8" fontcolor=white]
-			ctrl_af [label="Autofocus System
-(Algorithms, Metrics)" fillcolor="#4A7DB8" fontcolor=white]
-			ctrl_tissue [label="Tissue Detection
-(Empty Region Skip)" fillcolor="#4A7DB8" fontcolor=white]
+			ctrl_af [label="Autofocus Sweeps" fillcolor="#4A7DB8" fontcolor=white]
 			ctrl_config [label="Config Manager
 (YAML Loading)" fillcolor="#4A7DB8" fontcolor=white]
 		}
+		subgraph cluster_img {
+			color="#306998" fillcolor="#D4E4F4" label="microscope-imageprocessing" style=filled
+			img_debayer [label=Debayering fillcolor="#4A7DB8" fontcolor=white]
+			img_background [label="Background Correction" fillcolor="#4A7DB8" fontcolor=white]
+			img_writer [label="TIFF Tile Writer" fillcolor="#4A7DB8" fontcolor=white]
+			img_focus [label="Focus Metrics
+& Tissue Checks" fillcolor="#4A7DB8" fontcolor=white]
+		}
 		subgraph cluster_ppm {
-			color="#306998" fillcolor="#D4E4F4" label="ppm-library" style=filled
+			color="#306998" fillcolor="#D4E4F4" label="ppm-library (optional, PPM only)" style=filled
 			ppm_cal [label="PPM Calibration
 (Polarizer, Hue-to-Angle)" fillcolor="#4A7DB8" fontcolor=white]
-			ppm_debayer [label="Debayering
-(CPU/GPU)" fillcolor="#4A7DB8" fontcolor=white]
-			ppm_imaging [label="Image Processing
-(Background, Correction)" fillcolor="#4A7DB8" fontcolor=white]
 			ppm_analysis [label="Analysis Workflows
 (Fiber Angles)" fillcolor="#4A7DB8" fontcolor=white]
+		}
+		subgraph cluster_polscope {
+			color="#306998" fillcolor="#D4E4F4" label="polscope-library (optional, LC-PolScope only)" style=filled
+			pol_recon [label="Birefringence
+Reconstruction" fillcolor="#4A7DB8" fontcolor=white]
 		}
 		subgraph cluster_configs {
 			color="#27AE60" fillcolor="#E8F8E8" label="microscope-configurations" style=filled
@@ -93,10 +101,10 @@ Illumination)" fillcolor="#C0392B" fontcolor=white]
 	}
 	subgraph cluster_data {
 		color="#9B59B6" fillcolor="#F4ECF7" fontname="Helvetica Bold" fontsize=12 label="Data Output" style=filled
-		data_tiles [label="Raw Tiles
-(OME-TIFF)" fillcolor="#9B59B6" fontcolor=white]
+		data_tiles [label="Tiles
+(TIFF, on shared disk)" fillcolor="#9B59B6" fontcolor=white]
 		data_pyramid [label="Pyramidal Images
-(OME-ZARR / OME-TIFF)" fillcolor="#9B59B6" fontcolor=white]
+(OME-TIFF / OME-ZARR)" fillcolor="#9B59B6" fontcolor=white]
 	}
 	researcher -> qp_viewer [label="Draw ROIs"]
 	qp_app -> qp_viewer
@@ -112,9 +120,12 @@ Commands" color="#E74C3C" penwidth=2.5 style=bold]
 	srv_workflow -> srv_pipeline
 	srv_workflow -> ctrl_hw
 	srv_workflow -> ctrl_af
-	srv_pipeline -> ppm_debayer
-	srv_pipeline -> ppm_imaging
-	ctrl_af -> ctrl_tissue
+	srv_pipeline -> img_background
+	srv_pipeline -> img_writer
+	ctrl_hw -> img_debayer
+	ctrl_af -> img_focus
+	srv_workflow -> ppm_cal [label="PPM only" style=dashed]
+	srv_workflow -> pol_recon [label="LC-PolScope only" style=dashed]
 	ctrl_config -> cfg_templates [style=dashed]
 	cfg_templates -> cfg_resources [label=references style=dashed]
 	ppm_cal -> ppm_analysis
@@ -124,7 +135,7 @@ Commands" color="#E74C3C" penwidth=2.5 style=bold]
 	mmcore -> hw_stage
 	mmcore -> hw_camera
 	mmcore -> hw_optics
-	hw_camera -> data_tiles [label=Capture style=dashed]
+	img_writer -> data_tiles [label=Write style=dashed]
 	data_tiles -> t2p [label=Stitch]
 	t2p -> data_pyramid
 	data_pyramid -> qp_project [label=Import]

@@ -8,21 +8,21 @@ Defines Regions" fillcolor="#3498DB" fontcolor=white shape=ellipse]
 	qupath [label="QuPath
 + QPSC Extension
 (Annotation & Control)" fillcolor="#4A90D9" fontcolor=white]
-	python [label="Python Server
+	python [label="Microscope Server
 (Acquisition &
 Processing)" fillcolor="#306998" fontcolor=white]
 	micromanager [label="Micro-Manager
 (Hardware Control)" fillcolor="#E67E22" fontcolor=white]
 	microscope [label="Automated
 Microscope" fillcolor="#C0392B" fontcolor=white shape=box3d]
-	output [label="High-Resolution
-Images" fillcolor="#9B59B6" fontcolor=white shape=folder]
+	output [label="Image Tiles
+on Disk" fillcolor="#9B59B6" fontcolor=white shape=folder]
 	user -> qupath [label="1. Draw ROIs" color="#2C3E50"]
 	qupath -> python [label="2. Send Commands" color="#2C3E50"]
 	python -> micromanager [label="3. Control" color="#2C3E50"]
 	micromanager -> microscope [label="4. Move & Capture" color="#2C3E50"]
 	microscope -> python [label="5. Images" color="#7F8C8D" constraint=false style=dashed]
-	python -> output [label="6. Process & Stitch" color="#7F8C8D" style=dashed]
-	output -> qupath [label="7. Import Results" color="#7F8C8D" constraint=false style=dashed]
+	python -> output [label="6. Process & Write Tiles" color="#7F8C8D" style=dashed]
+	output -> qupath [label="7. Stitch & Import" color="#7F8C8D" constraint=false style=dashed]
 	qupath -> user [label="8. Refine & Repeat" color="#27AE60" constraint=false style=dotted]
 }

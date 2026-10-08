@@ -17,10 +17,10 @@ This guide is for developers working on QPSC code, adding new features, or integ
 ### Prerequisites
 
 - **Git**: For cloning repositories
-- **Python 3.9+**: For microscope control server
-- **Java 21+**: For QuPath extensions
-- **Micro-Manager 2.0+**: For hardware control
-- **QuPath 0.7.0+**: For running extensions
+- **Python 3.10+**: For the microscope server (CI tests 3.10, 3.11 and 3.12)
+- **JDK 25**: For building the QuPath extensions. The build emits Java 21 bytecode, which is what QuPath 0.7 runs on
+- **Micro-Manager**: Running, with a hardware configuration loaded, before the microscope server starts
+- **QuPath 0.7.0**: The version the extensions are built against
 
 ### Clone All Repositories
 
@@ -30,14 +30,16 @@ mkdir QPSC_Dev
 cd QPSC_Dev
 
 # Python packages
-git clone https://github.com/uw-loci/ppm_library.git
+git clone https://github.com/uw-loci/microscope_imageprocessing.git
+git clone https://github.com/uw-loci/ppm_library.git          # optional: PPM only
+git clone https://github.com/uw-loci/polscope_library.git     # optional: LC-PolScope only
 git clone https://github.com/uw-loci/microscope_control.git
 git clone https://github.com/uw-loci/microscope_command_server.git
 git clone https://github.com/uw-loci/microscope_configurations.git
 
 # QuPath extensions
-git clone https://github.com/uw-loci/qupath-extension-qpsc.git
 git clone https://github.com/uw-loci/qupath-extension-tiles-to-pyramid.git
+git clone https://github.com/uw-loci/qupath-extension-qpsc.git
 ```
 
 ### Python Setup (Editable Install)
@@ -47,63 +49,80 @@ git clone https://github.com/uw-loci/qupath-extension-tiles-to-pyramid.git
 python -m venv venv_qpsc
 source venv_qpsc/bin/activate  # On Windows: venv_qpsc\Scripts\activate
 
-# Install in dependency order (IMPORTANT!)
-cd ppm_library && pip install -e . && cd ..
-cd microscope_control && pip install -e . && cd ..
-cd microscope_command_server && pip install -e . && cd ..
-
-# Also install pycromanager
-pip install pycromanager
+# Install in dependency order. None of these packages is on PyPI,
+# so pip cannot fetch a missing one for you.
+cd microscope_imageprocessing && pip install -e ".[dev]" && cd ..
+cd ppm_library && pip install -e ".[dev]" && cd ..          # optional: PPM only
+cd polscope_library && pip install -e ".[dev]" && cd ..     # optional: LC-PolScope only
+cd microscope_control && pip install -e ".[dev]" && cd ..
+cd microscope_command_server && pip install -e ".[dev]" && cd ..
 ```
 
-**Why this order?**
-- `ppm_library` has no inter-package dependencies
-- `microscope_control` depends on `ppm_library`
-- `microscope_command_server` depends on both
+The order follows the dependencies:
+
+- `microscope_imageprocessing` and `polscope_library` depend on none of the other QPSC packages
+- `ppm_library` and `microscope_control` each depend on `microscope_imageprocessing`
+- `microscope_command_server` depends on `microscope_control` and `microscope_imageprocessing`. `ppm_library` is needed only for PPM, and `polscope_library` only for LC-PolScope
+
+The dependency table is in [Python Package Dependencies](architecture.md#python-package-dependencies).
+
+`pycromanager` is installed as a dependency of `microscope_control`. The `[dev]` extra adds pytest and pytest-cov, which the tests need.
 
 ### Java/QuPath Extension Setup
 
-```bash
-# Build qupath-extension-qpsc
-cd qupath-extension-qpsc
-./gradlew build
+`qupath-extension-qpsc` takes `qupath-extension-tiles-to-pyramid` from your local Maven repository, at the version pinned in its `build.gradle.kts` (0.7.1 at the time of writing). Publish that version first:
 
-# JAR will be in build/libs/qupath-extension-qpsc-X.X.X.jar
-# Copy to QuPath extensions folder:
-cp build/libs/qupath-extension-qpsc-*.jar ~/QuPath/extensions/
+```bash
+cd qupath-extension-tiles-to-pyramid
+git checkout v0.7.1
+./gradlew publishToMavenLocal
+
+cd ../qupath-extension-qpsc
+./gradlew shadowJar
+
+# JAR will be in build/libs/qupath-extension-qpsc-X.X.X-all.jar
+# Copy to the QuPath extensions folder:
+cp build/libs/qupath-extension-qpsc-*-all.jar ~/QuPath/v0.7/extensions/
 ```
 
+QuPath also needs the tiles-to-pyramid extension JAR in the same folder to stitch tiles. If you set a custom extensions directory in QuPath, copy the JARs there instead.
+
 ### Running the Server
+
+Start Micro-Manager first. The server connects to it at startup and exits if it cannot.
 
 ```bash
 # Activate virtual environment
 source venv_qpsc/bin/activate
 
 # Start server
-python -m microscope_server.server.qp_server
+python -m microscope_command_server.server.qp_server
 ```
 
 ---
 
 ## Server Communication Protocol
 
+The complete wire-level reference is [SOCKET_PROTOCOL.md](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/documentation/developer/SOCKET_PROTOCOL.md) in the extension repository. This section covers what you need to follow an acquisition.
+
 ### Overview
 
-The QPSC extension communicates with the microscope command server via **TCP sockets** on **port 5000** (configurable).
+The QPSC extension talks to the microscope server over TCP on port 5000. The extension's port is the **Microscope Server Port** preference. The server's port is the constant `TCP_PORT` in `server/protocol.py`; changing it means editing that file.
 
-**Protocol Structure:**
-```
-[8-byte command] + [text message parameters] + "ENDOFSTR"
-```
+Every command starts with 8 ASCII bytes, lower case, padded with underscores. What follows depends on the command:
 
-### Command Format
+| Follows the command | Example |
+|---|---|
+| nothing | `getxy___` |
+| a fixed-size binary payload | `move____` + X and Y as two big-endian 32-bit floats |
+| a 4-byte big-endian length, then that many bytes | `config__` + the path of the microscope YAML |
+| a text message ending in `ENDOFSTR` | `acquire_`, `bgacquir` |
 
-All commands are **8 bytes** (fixed-length) followed by optional message text.
-
-**Basic Commands:**
+### Commands used here
 
 | Command | Bytes | Purpose |
 |---------|-------|---------|
+| `CONFIG` | `config__` | Load a microscope configuration. Sent by the extension on every connect |
 | `GETXY` | `getxy___` | Get XY stage position |
 | `GETZ` | `getz____` | Get Z stage position |
 | `MOVE` | `move____` | Move XY stage |
@@ -116,491 +135,174 @@ All commands are **8 bytes** (fixed-length) followed by optional message text.
 | `PROGRESS` | `progress` | Get acquisition progress |
 | `CANCEL` | `cancel__` | Cancel running acquisition |
 
-### Acquisition Command Structure
+### Starting an acquisition
 
-The `ACQUIRE` command is used by the QPSC extension to start a full acquisition workflow.
+The extension builds the message with `AcquisitionCommandBuilder` and sends it with `MicroscopeSocketClient.startAcquisition`, which appends ` ENDOFSTR`:
 
-**Full Command Format:**
-```
-[8-byte "acquire_"] + [parameter message] + "ENDOFSTR"
+```java
+AcquisitionCommandBuilder builder = AcquisitionCommandBuilder.builder()
+        .yamlPath("/path/config_PPM.yml")
+        .projectsFolder("/data/projects")
+        .sampleLabel("Sample_001")
+        .scanType("ppm_20x_1")
+        .regionName("Region_1")
+        .hardware("LOCI_OBJECTIVE_OLYMPUS_20X_POL_001", "LOCI_DETECTOR_JAI_001", 0.1725)
+        .angleExposures(List.of(
+                new AngleExposure(-7.0, 500.0),
+                new AngleExposure(0.0, 800.0),
+                new AngleExposure(7.0, 500.0)))
+        .backgroundCorrection(true, "divide", "/path/to/backgrounds")
+        .wbMode("per_angle");
+
+client.startAcquisition(builder);   // sends acquire_, then the message + " ENDOFSTR"
 ```
 
-**Example Acquisition Message:**
+The message is a single line of flags. Values that contain spaces, parentheses or commas are quoted:
+
 ```
---yaml /path/config.yml --projects /output/folder --sample Sample_001
---scan-type ppm_20x_1 --region RegionName --angles (-5.0,0.0,5.0,90.0)
---exposures (120.0,250.0,60.0,1.2) --objective LOCI_OBJ_001
---detector LOCI_DET_001 --pixel-size 0.5 --white-balance true
---af-tiles 3 --af-steps 10 --af-range 50.0 ENDOFSTR
+--yaml /path/config_PPM.yml --projects /data/projects --sample Sample_001
+--scan-type ppm_20x_1 --region Region_1
+--objective LOCI_OBJECTIVE_OLYMPUS_20X_POL_001 --detector LOCI_DETECTOR_JAI_001 --pixel-size 0.1725
+--angles "(-7.0,0.0,7.0)" --exposures "(500.0,800.0,500.0)"
+--bg-correction true --bg-method divide --bg-folder /path/to/backgrounds
+--wb-mode per_angle --processing "(background_correction,white_balance)" ENDOFSTR
 ```
+
+(Shown wrapped. The builder may add further flags from QuPath preferences.)
+
+On the server, `handle_acquire` in `server/handlers/acquisition.py` reads up to `ENDOFSTR`, starts the acquisition in a background thread, and replies at once. The thread runs `_acquisition_workflow` in `acquisition/workflow.py`, which parses the message with `parse_acquisition_message`. [What Happens During an Acquisition](architecture.md#what-happens-during-an-acquisition) describes the steps.
 
 ### Parameter Reference
 
-#### Required Parameters
+#### Required
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| `--yaml` | String (path) | Path to microscope configuration YAML | `/config/ppm.yml` |
+| `--yaml` | String (path) | Path to microscope configuration YAML | `/config/config_PPM.yml` |
 | `--projects` | String (path) | Output projects folder path | `/data/projects` |
 | `--sample` | String | Sample label | `Sample_001` |
-| `--scan-type` | String | Scan type with magnification | `ppm_20x_1`, `bf_10x_2` |
-| `--region` | String | Region/annotation name | `Annotation_1` |
-
-#### Optional Hardware Parameters
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `--objective` | String | Objective identifier (LOCI lookup key) | `LOCI_OBJ_001` |
-| `--detector` | String | Detector identifier (LOCI lookup key) | `LOCI_DET_001` |
-| `--pixel-size` | Float | Pixel size in micrometers | `0.5` |
-
-#### Multi-Angle Parameters
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `--angles` | List (in parentheses) | Comma-separated angle list | `(-5.0,0.0,5.0,90.0)` |
-| `--exposures` | List (in parentheses) | Comma-separated exposure times | `(120.0,250.0,60.0,1.2)` |
-
-**Note:** Angle and exposure lists must have matching lengths.
-
-#### Background Correction Parameters
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `--bg-correction` | Boolean | Enable/disable background correction | `true`, `false` |
-| `--bg-method` | String | Background correction method | `divide`, `subtract` |
-| `--bg-folder` | String (path) | Path to background image folder | `/data/backgrounds` |
-| `--bg-disabled-angles` | List | Angles to skip BG correction | `(90.0,95.0)` |
-
-#### Autofocus Parameters
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `--af-tiles` | Integer | Number of tiles for autofocus grid | `3` (3x3 grid) |
-| `--af-steps` | Integer | Number of Z steps for focus search | `10` |
-| `--af-range` | Float | Search range in micrometers | `50.0` |
-
-#### Other Options
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `--white-balance` | Boolean | Enable white balance | `true`, `false` |
-| `--processing` | List | Pipeline processing steps | `(debayer,background_correction)` |
-| `--hint-z` | Float | Z-focus hint from tilt model | `1234.5` |
-
-### Code Examples
-
-#### Java (QuPath Extension)
-
-**Building the acquisition message:**
-
-```java
-// From AcquisitionCommandBuilder.java
-public class AcquisitionCommandBuilder {
-
-    public String buildSocketMessage() {
-        StringBuilder message = new StringBuilder();
-
-        // Required parameters
-        message.append("--yaml ").append(configPath);
-        message.append(" --projects ").append(projectsFolder);
-        message.append(" --sample ").append(sampleLabel);
-        message.append(" --scan-type ").append(scanType);
-        message.append(" --region ").append(regionName);
-
-        // Add angles if present
-        if (!angles.isEmpty()) {
-            message.append(" --angles (")
-                   .append(angles.stream()
-                          .map(String::valueOf)
-                          .collect(Collectors.joining(",")))
-                   .append(")");
-        }
-
-        // Add exposures if present
-        if (!exposures.isEmpty()) {
-            message.append(" --exposures (")
-                   .append(exposures.stream()
-                          .map(String::valueOf)
-                          .collect(Collectors.joining(",")))
-                   .append(")");
-        }
-
-        // Add optional parameters
-        if (objectiveId != null) {
-            message.append(" --objective ").append(objectiveId);
-        }
-
-        if (detectorId != null) {
-            message.append(" --detector ").append(detectorId);
-        }
-
-        if (pixelSize > 0) {
-            message.append(" --pixel-size ").append(pixelSize);
-        }
-
-        // Autofocus parameters
-        if (autofocusTiles > 0) {
-            message.append(" --af-tiles ").append(autofocusTiles);
-            message.append(" --af-steps ").append(autofocusSteps);
-            message.append(" --af-range ").append(autofocusRange);
-        }
-
-        // Background correction
-        if (backgroundCorrectionEnabled) {
-            message.append(" --bg-correction true");
-            message.append(" --bg-method ").append(bgMethod);
-            if (bgFolder != null) {
-                message.append(" --bg-folder ").append(bgFolder);
-            }
-        }
-
-        // End marker
-        message.append(" ENDOFSTR");
-
-        return message.toString();
-    }
-}
-```
-
-**Sending the command via socket:**
-
-```java
-// From MicroscopeSocketClient.java
-public void sendAcquisitionCommand(String message) throws IOException {
-    // 1. Send 8-byte ACQUIRE command
-    output.write(Command.ACQUIRE.getValue()); // b"acquire_"
-    output.flush();
-
-    // 2. Send parameter message
-    byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
-    output.write(messageBytes);
-    output.flush();
-
-    // 3. Wait for 16-byte acknowledgment
-    byte[] ackResponse = new byte[16];
-    input.readFully(ackResponse);
-
-    String ack = new String(ackResponse, StandardCharsets.UTF_8).trim();
-    if (!ack.startsWith("STARTED:ACQUIRE")) {
-        throw new IOException("Unexpected server response: " + ack);
-    }
-}
-```
-
-#### Python (Server)
-
-**Parsing the acquisition message:**
-
-```python
-# From workflow.py
-import shlex
-
-def parse_acquisition_message(message: str) -> dict:
-    """Parse acquisition command parameters from message."""
-
-    # Remove ENDOFSTR marker
-    message = message.replace("ENDOFSTR", "")
-
-    # Use shlex for robust parsing (handles quoted paths with spaces)
-    parts = shlex.split(message)
-
-    params = {}
-    i = 0
-
-    while i < len(parts):
-        if parts[i].startswith("--"):
-            flag = parts[i][2:]  # Remove "--"
-
-            # Required parameters
-            if flag == "yaml":
-                params["yaml_file_path"] = parts[i+1]
-            elif flag == "projects":
-                params["projects_folder_path"] = parts[i+1]
-            elif flag == "sample":
-                params["sample_label"] = parts[i+1]
-            elif flag == "scan-type":
-                params["scan_type"] = parts[i+1]
-            elif flag == "region":
-                params["region_name"] = parts[i+1]
-
-            # Multi-angle parameters
-            elif flag == "angles":
-                # Parse "(1.0,2.0,3.0)" to [1.0, 2.0, 3.0]
-                angles_str = parts[i+1].strip("()")
-                params["angles"] = [float(a) for a in angles_str.split(",")]
-            elif flag == "exposures":
-                exposures_str = parts[i+1].strip("()")
-                params["exposures"] = [float(e) for e in exposures_str.split(",")]
-
-            # Hardware parameters
-            elif flag == "objective":
-                params["objective"] = parts[i+1]
-            elif flag == "detector":
-                params["detector"] = parts[i+1]
-            elif flag == "pixel-size":
-                params["pixel_size"] = float(parts[i+1])
-
-            # Autofocus parameters
-            elif flag == "af-tiles":
-                params["autofocus_tiles"] = int(parts[i+1])
-            elif flag == "af-steps":
-                params["autofocus_steps"] = int(parts[i+1])
-            elif flag == "af-range":
-                params["autofocus_range"] = float(parts[i+1])
-
-            # Background correction
-            elif flag == "bg-correction":
-                params["background_correction_enabled"] = parts[i+1].lower() == "true"
-            elif flag == "bg-method":
-                params["bg_method"] = parts[i+1]
-            elif flag == "bg-folder":
-                params["bg_folder"] = parts[i+1]
-
-            # White balance
-            elif flag == "white-balance":
-                params["white_balance"] = parts[i+1].lower() == "true"
-
-            # Z hint
-            elif flag == "hint-z":
-                params["hint_z"] = float(parts[i+1])
-
-            i += 2
-        else:
-            i += 1
-
-    # Validate required parameters
-    required = ["yaml_file_path", "projects_folder_path", "sample_label",
-                "scan_type", "region_name"]
-    for req in required:
-        if req not in params:
-            raise ValueError(f"Missing required parameter: {req}")
-
-    return params
-```
-
-**Handling the acquisition workflow:**
-
-```python
-# From qp_server.py
-def handle_acquire_command(self, message: str):
-    """Handle ACQUIRE command - start full acquisition workflow."""
-
-    # Parse parameters
-    try:
-        params = parse_acquisition_message(message)
-    except ValueError as e:
-        self.send_error(f"Invalid parameters: {e}")
-        return
-
-    # Spawn acquisition thread
-    acquisition_thread = threading.Thread(
-        target=self._acquisition_workflow,
-        args=(params,),
-        daemon=True
-    )
-    acquisition_thread.start()
-
-    # Send acknowledgment (16 bytes)
-    ack = "STARTED:ACQUIRE".ljust(16)
-    self.socket.send(ack.encode('utf-8'))
-
-def _acquisition_workflow(self, params: dict):
-    """Execute the full acquisition workflow."""
-
-    try:
-        # 1. Load configuration
-        config = load_config(params["yaml_file_path"])
-
-        # 2. Initialize hardware
-        hardware = initialize_hardware(config)
-
-        # 3. Load scan type parameters
-        scan_params = get_scan_parameters(
-            config,
-            params["scan_type"]
-        )
-
-        # 4. For each tile position:
-        for tile_pos in tile_positions:
-            # Move stage
-            hardware.move_xy(tile_pos.x, tile_pos.y)
-
-            # Autofocus (if enabled)
-            if params.get("autofocus_tiles"):
-                z_pos = run_autofocus(hardware, params)
-                hardware.move_z(z_pos)
-
-            # For each angle:
-            for angle, exposure in zip(params["angles"], params["exposures"]):
-                # Rotate
-                hardware.rotate(angle)
-
-                # Capture image
-                image = hardware.capture(exposure)
-
-                # Process image
-                if scan_params.get("debayer"):
-                    image = debayer_image(image)
-
-                if params.get("background_correction_enabled"):
-                    image = apply_background_correction(image, angle, params)
-
-                # Save as OME-TIFF
-                save_ome_tiff(image, output_path, metadata)
-
-        # 5. Signal completion
-        self.acquisition_status = "COMPLETED"
-
-    except Exception as e:
-        logger.error(f"Acquisition failed: {e}")
-        self.acquisition_status = "FAILED"
-```
+| `--scan-type` | String | Scan type with magnification | `ppm_20x_1` |
+| `--region` | String | Region/annotation name | `Region_1` |
+
+#### Hardware
+
+Sent together, and only when all three are known.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--objective` | String | Objective identifier |
+| `--detector` | String | Detector identifier |
+| `--pixel-size` | Float | Pixel size in micrometers |
+
+#### Angles or channels
+
+An acquisition is angle-based or channel-based. If `--channels` is present the server ignores `--angles`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--angles` | List in parentheses | Rotation angles in ticks, as sent by the modality handler. One tick is one optical degree (see [Terms](architecture.md#terms)) |
+| `--exposures` | List in parentheses | Exposure per angle in ms. Sent alone, with one value, for a modality that does not rotate |
+| `--channels` | List in parentheses | Channel ids |
+| `--channel-exposures` | List in parentheses | Exposure per channel in ms |
+| `--channel-intensities` | List of `id=value` | Intensity overrides for the channels the user changed |
+| `--focus-channel` | String | Acquired channel to apply before the autofocus snap |
+| `--inner-axis` | `z`, `channel` or `angle` | Which loop is innermost for each tile |
+
+#### Background correction and white balance
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--bg-correction` | Boolean | Sent as `true` when background correction is on |
+| `--bg-method` | String | Correction method, for example `divide` |
+| `--bg-folder` | String (path) | Background image folder |
+| `--bg-disabled-angles` | List in parentheses | Angles to leave uncorrected |
+| `--wb-mode` | `per_angle`, `simple`, `camera_awb` or `off` | White balance mode. The server refuses an acquisition without it |
+
+#### Autofocus
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--af-tiles`, `--af-steps`, `--af-range` | Integer, Integer, Float | Sent together; `--af-range` is in um. Recorded in the acquisition metadata; the autofocus itself is configured from `autofocus_<microscope>.yml` |
+| `--af-disabled` | flag | Sent instead of the three above when autofocus is turned off in preferences |
+| `--af-skip-initial` | flag | The sample is already in focus; skip the first autofocus |
+| `--af-strategy` | String | Autofocus strategy override |
+| `--af-benchmark` | flag | Time the autofocus methods on every tile |
+| `--af-channel`, `--af-channel-exposure`, `--af-channel-intensity` | String, Float, Float | Dedicated focus channel |
+| `--focus-surface` | `observe` or `enforce` | Fit a surface through the autofocus results. Absent means off |
+| `--focus-survey`, `--focus-survey-tiles` | Integer, comma-separated integers | Focus points to measure before the tile loop |
+| `--preferred-af-tile` | Integer | Tile index to autofocus on first |
+| `--hint-z` | Float | Starting Z for focus, in um |
+
+#### Z-stack, time-lapse and output
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--z-stack` | flag | Acquire a Z-stack |
+| `--z-start`, `--z-end`, `--z-step` | Float | Stack range and step, in um |
+| `--z-pixel-size` | Float | Z spacing recorded for the output, in um |
+| `--z-projection` | String | How the stack is reduced |
+| `--edf-metric`, `--edf-window`, `--edf-index-smooth` | String, Integer, Integer | Tuning for the `edf` projection |
+| `--timepoints` | Integer | Number of timepoints, sent when greater than 1 |
+| `--interval` | Float | Seconds between timepoints |
+| `--output-format` | String | Output layout. The server default is `ome-per-t` |
+| `--save-raw` | Boolean | Keep raw tiles |
+| `--processing` | List in parentheses | Processing steps the extension enabled. Recorded in the acquisition metadata |
+| `--batch-acquire` | flag | One slide of a multi-slide batch |
+
+#### Laser scanning and PPM
+
+| Parameter | Type |
+|-----------|------|
+| `--laser-power` | Float |
+| `--laser-wavelength` | Integer |
+| `--dwell-time` | Float |
+| `--averaging` | Integer |
+| `--biref-min-intensity` | Integer |
+| `--ppm-high-bit-depth` | Boolean |
+
+The parser also accepts two older flags the extension no longer sends: `--white-balance` and `--wb-per-angle`.
 
 ### Response Format
 
-**Acknowledgment (16 bytes):**
-```
-"STARTED:ACQUIRE" (padded to 16 bytes with spaces)
-```
+`acquire_` replies with 16 bytes, space-padded:
 
-**Status Responses:**
+- `STARTED:ACQUIRE`: the acquisition thread has started
+- `BUSY:ACQUIRING`: another acquisition is already running; this one was refused
 
-When client sends `STATUS__` command:
-- `"IDLE"` - No acquisition running
-- `"RUNNING"` - Acquisition in progress
-- `"COMPLETED"` - Acquisition finished successfully
-- `"FAILED"` - Acquisition encountered error
+The message is parsed after this reply. A bad parameter therefore shows up as `FAILED` on the next status poll, not here.
 
-When client sends `PROGRESS` command:
-```
-Returns: (current_position, total_positions) as tuple
-Example: (45, 100) means 45 out of 100 tiles complete
-```
+`status__` replies with one of:
 
-### Client Commands vs QPSC Workflow
+- `IDLE`, `RUNNING`, `CANCELLING`, `CANCELLED`: the state name, space-padded to 16 bytes
+- `COMPLETED|final_z:<z>`, optionally followed by `|sat:<summary>`
+- `FAILED: <message>`, padded with spaces to at least 32 bytes and at most 500 bytes long
 
-**Important distinction:**
+`progress` replies with 8 bytes: two big-endian unsigned 32-bit integers, current and total. They count images, not tiles: the total is tiles x Z planes x angles or channels x timepoints.
 
-The microscope_command_server includes **client commands** (GETXY, GETZ, MOVE, etc.) for direct hardware control during manual operation or testing.
+`cancel__` replies with `ACK` (3 bytes).
 
-**The QPSC extension primarily uses:**
-- `ACQUIRE_` - Start full acquisition workflow (tiles, angles, autofocus, etc.)
-- `STATUS__` - Monitor acquisition state
-- `PROGRESS` - Track progress during acquisition
-- `CANCEL__` - Cancel running acquisition
+### Who moves the stage
 
-The QPSC extension **does NOT** directly call stage movement or position commands during normal acquisition - those are handled internally by the server workflow.
+The extension uses the stage commands directly for the Live Viewer, the stage map, alignment and the position display. Position queries and XY moves go over a second (auxiliary) connection, so they keep working while an acquisition runs.
+
+Inside an acquisition, tile-to-tile moves, autofocus and rotation are done by the server. The extension polls `status__` and `progress`, and sends `cancel__` if the user cancels.
 
 ### Server Startup and Configuration
 
-#### Dynamic Configuration Loading
+The server starts with a minimal built-in configuration that has wide stage limits and no modalities. It needs Micro-Manager running, and exits if it cannot connect.
 
-The microscope server uses a two-stage configuration approach:
+The microscope configuration arrives from the client in two places:
 
-1. **Startup Configuration**: Generic minimal config allows server to start
-   - Permissive stage limits for exploratory movements
-   - No microscope-specific features enabled
-   - Micro-Manager connection established
+1. **`config__`, on connect.** The extension sends the path of the microscope YAML set in its preferences as soon as it connects. The server loads it, rebuilds its stage, rotation, illumination and detector objects, and starts a session log in a `logs` folder next to the YAML. Until this happens, `getfov__` returns `(-1, -1)`, `getpxsz_` returns `0`, and stage move commands are ignored with a warning in the server log.
+2. **`--yaml`, in each `acquire_` message.** The server loads this file again for the acquisition. If it is not the file given to `config__`, the server logs a configuration-mismatch warning and uses the `--yaml` file.
 
-2. **Acquisition Configuration**: Full microscope config loaded from client
-   - Provided via `--yaml` parameter in ACQUIRE command
-   - Replaces startup config dynamically
-   - Enables microscope-specific features (PPM rotation, etc.)
-
-**Why this matters:**
-- Server is portable across different microscopes
-- No hardcoded config file dependency
-- Client controls which microscope config is used
-- Config can change between acquisitions
-
-**Example workflow:**
-```python
-# 1. Server starts with generic config
-python -m microscope_server.server.qp_server
-
-# 2. Client sends ACQUIRE with specific config
-ACQUIRE --yaml /configs/config_PPM.yml --projects /data --sample S001 ...
-
-# 3. Server loads config_PPM.yml and uses it for acquisition
-
-# 4. Next acquisition can use different config
-ACQUIRE --yaml /configs/config_CAMM.yml --projects /data --sample S002 ...
-```
-
-**Exploratory Commands:**
-Commands like GETXY, MOVE, GETZ use the most recently loaded config:
-- Before first ACQUIRE: Uses generic startup config with permissive stage limits
-- After ACQUIRE: Uses the microscope-specific config from that acquisition
+The server accepts one client machine at a time. A `config__` from another IP address is refused while the first is connected. When the last connection from the configured machine closes, the server returns to its unconfigured state.
 
 ---
 
 ## Architecture Overview
 
-### Component Interaction
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        QuPath GUI                            │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │         QPSC Extension (Java)                         │  │
-│  │  - UI dialogs for workflow configuration             │  │
-│  │  - Annotation → Stage coordinate transformation      │  │
-│  │  - Socket client for microscope server               │  │
-│  └────────────────────┬──────────────────────────────────┘  │
-└────────────────────────┼──────────────────────────────────────┘
-                        │
-                   TCP Socket
-                   (port 5000)
-                        │
-┌────────────────────────┼──────────────────────────────────────┐
-│  Microscope Command Server (Python)                          │
-│  ┌─────────────────────┴──────────────────────────────────┐  │
-│  │  qp_server.py - Socket server                         │  │
-│  │  - Parse commands                                      │  │
-│  │  - Spawn acquisition threads                          │  │
-│  │  - Track progress                                      │  │
-│  └────────────────────┬───────────────────────────────────┘  │
-│                       │                                       │
-│  ┌─────────────────────┴──────────────────────────────────┐  │
-│  │  workflow.py - Acquisition orchestration              │  │
-│  │  - Load config                                         │  │
-│  │  - Execute tile grid                                   │  │
-│  │  - Run autofocus                                       │  │
-│  │  - Capture images (multi-angle)                       │  │
-│  │  - Save OME-TIFF tiles                                │  │
-│  └────────────────────┬───────────────────────────────────┘  │
-└────────────────────────┼──────────────────────────────────────┘
-                        │
-                     Pycro-Manager
-                        │
-┌────────────────────────┼──────────────────────────────────────┐
-│               Micro-Manager (Java)                            │
-│  - Device adapters                                            │
-│  - Camera control                                             │
-│  - Stage control                                              │
-│  - Filter wheels, shutters, etc.                             │
-└────────────────────────┼──────────────────────────────────────┘
-                        │
-              ┌─────────┴─────────┐
-              │                   │
-         Microscope            Camera
-         Hardware            Hardware
-```
-
-### Data Flow
-
-1. User draws annotations in QuPath
-2. QPSC extension transforms annotations → tile grid (stage coordinates)
-3. Extension sends ACQUIRE command with parameters via socket
-4. Python server parses command, spawns acquisition thread
-5. Server executes workflow:
-   - For each tile: Move stage → Autofocus → Capture images (multi-angle)
-   - Process images (debayer, background correction)
-   - Save as OME-TIFF tiles
-6. Server signals completion
-7. QuPath extension stitches OME-TIFF tiles → Pyramidal OME-TIFF
-8. QuPath imports stitched image into project
+How the components fit together, what happens during an acquisition, and where files land are described in the [Architecture](architecture.md) page. Start with [The System at a Glance](architecture.md#the-system-at-a-glance) and [What Happens During an Acquisition](architecture.md#what-happens-during-an-acquisition).
 
 ---
 
@@ -608,76 +310,70 @@ Commands like GETXY, MOVE, GETZ use the most recently loaded config:
 
 ### Modality System Overview
 
-QPSC supports pluggable imaging modalities (brightfield, PPM, fluorescence, etc.). Each modality defines:
-- Rotation angles
-- Exposure times
-- Optional UI components
-- Angle override logic
+A modality is handled by a `ModalityHandler` in the QPSC extension, chosen by the prefix of the modality name, and by a `ModalityConfig` registered under the same prefix in the microscope server. [Modality System](architecture.md#modality-system) explains the design and when a new mode needs a handler at all. Many new modes need only an [acquisition profile](configuration.md#acquisition-profiles) in YAML.
 
 ### Implementing a New Modality
 
-**1. Create Modality Handler (Java):**
+**1. Create the handler (Java).** `getRotationAngles` is the only method a handler must implement. The other hooks have defaults; see [`ModalityHandler.java`](https://github.com/uw-loci/qupath-extension-qpsc/blob/main/src/main/java/qupath/ext/qpsc/modality/ModalityHandler.java).
 
 ```java
-package qupath.ext.qpsc.modality.newmodality;
+package qupath.ext.qpsc.modality;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class NewModalityHandler implements ModalityHandler {
 
     @Override
-    public String getPrefix() {
-        return "newmod";  // Matches "newmod_20x_1" in config
-    }
-
-    @Override
-    public List<Double> getRotationAngles(String scanType,
-                                          Map<String, Object> config) {
-        // Return default angles for this modality
-        return Arrays.asList(0.0, 45.0, 90.0, 135.0);
-    }
-
-    @Override
-    public List<Double> getExposures(String scanType,
-                                     Map<String, Object> config) {
-        // Return default exposures (ms)
-        return Arrays.asList(100.0, 100.0, 100.0, 100.0);
-    }
-
-    @Override
-    public Optional<Node> getUI(String scanType,
-                                Map<String, Object> config) {
-        // Optional: Return JavaFX UI for modality-specific parameters
-        return Optional.empty();
-    }
-
-    @Override
-    public List<Double> overrideAngles(String scanType,
-                                       Map<String, Object> config,
-                                       Map<String, Object> uiParams) {
-        // Optional: Allow UI to override angles
-        return getRotationAngles(scanType, config);
+    public CompletableFuture<List<AngleExposure>> getRotationAngles(
+            String modalityName, String objective, String detector, String wbMode) {
+        // A modality that does not rotate returns an empty list.
+        // A rotating modality returns one AngleExposure (ticks, exposure in ms) per angle.
+        return CompletableFuture.completedFuture(List.of());
     }
 }
 ```
 
-**2. Register Modality:**
+A channel-based modality also overrides `getChannels(modality, objective, detector)`. Override `createBoundingBoxUI()` to add controls to the acquisition dialog, and `getMenuContributions()` to add menu items.
+
+**2. Register the handler.** The built-in handlers are registered in the static initializer of `ModalityRegistry`. Add yours there:
 
 ```java
-// In SetupScope.java or extension initialization
-ModalityRegistry.register(new NewModalityHandler());
+registerHandler("newmod", new NewModalityHandler());
 ```
 
-**3. Add to Configuration YAML:**
+Lookup returns the handler with the longest registered prefix that the modality name starts with, so `newmod_20x` resolves to this handler.
+
+**3. Register the modality in the microscope server (Python).** Add a module under `microscope_command_server/modality/` that builds a `ModalityConfig` and registers it under the same prefix, and call its register function from `modality/__init__.py`. `modality/brightfield.py` is a short example. Trimmed to the essentials:
+
+```python
+from .config import ModalityConfig
+from .registry import register
+
+BRIGHTFIELD_CONFIG = ModalityConfig(
+    autofocus_angle=None,
+    has_rotation=False,
+    default_angle_count=1,
+)
+
+def register_brightfield():
+    register("bf", BRIGHTFIELD_CONFIG)
+    register("brightfield", BRIGHTFIELD_CONFIG)
+```
+
+Both registries return the longest registered prefix that matches, so a new prefix may extend an existing one, as `bf_if` extends `bf`. Register the same prefix on both sides.
+
+**4. Add the modality to the microscope configuration.** Give it an entry under `modalities` whose name starts with the registered prefix, as `config_PPM.yml` does for PPM:
 
 ```yaml
-scan_types:
-  newmod_20x_1:
-    objective: LOCI_OBJ_001
-    detector: LOCI_DET_001
-    pixel_size: 0.5
-    angles: [0.0, 45.0, 90.0, 135.0]
-    exposures: [100.0, 100.0, 100.0, 100.0]
-    modality: newmodality
+modalities:
+  ppm:
+    type: polarized
 ```
+
+The remaining keys are described in the [Configuration Guide](configuration.md).
+
+A new modality counts as Implemented, in the terms of [Registered Modalities](architecture.md#registered-modalities), until it has been acquired on real hardware and the output checked.
 
 ---
 
@@ -690,57 +386,56 @@ cd qupath-extension-qpsc
 ./gradlew test
 ```
 
-### Unit Tests (Python)
+The Java tests (JUnit) cover coordinate transformations, utilities, configuration access, socket message flags, modality handlers and UI controller logic. The test task adds the JavaFX modules it needs.
+
+To run one test class:
 
 ```bash
-# Activate virtual environment
-source venv_qpsc/bin/activate
-
-# Run all tests
-pytest microscope_control/
-pytest microscope_command_server/
-pytest ppm_library/
+./gradlew test --tests "<fully qualified class name>"
 ```
 
-### Integration Testing
+### Unit Tests (Python)
 
-**Mock hardware testing:**
+Run `pytest` from the root of each Python repository, with the virtual environment active:
 
-```python
-# In microscope_control/tests/test_mock_hardware.py
-from microscope_control.hardware.mock_hardware import MockMicroscopeHardware
-
-def test_acquisition_workflow():
-    hardware = MockMicroscopeHardware()
-
-    # Test stage movement
-    hardware.move_xy(1000, 2000)
-    pos = hardware.get_xy_position()
-    assert pos == (1000, 2000)
-
-    # Test capture
-    image = hardware.capture(exposure=100.0)
-    assert image is not None
+```bash
+cd microscope_command_server
+pytest
 ```
+
+The Python tests cover focus metrics, background correction, debayering, Z projections, tile grid parsing, and individual server command handlers.
+
+### Handler Tests with Fakes
+
+Server command handlers are tested one at a time against hand-written fake connections and fake hardware objects. These cover behavior such as refusing a second acquisition and fixed-size replies.
+
+Two kinds of test do not exist yet:
+
+- No automated test starts the server and drives it over a socket. A Java client test with a mock server exists (`MicroscopeSocketClientTest`) but is disabled.
+- No automated test covers acquire, stitch and import end to end.
+
+### How Tests Run
+
+- The lab's shared pre-push hook runs `./gradlew test` when a push changes Java sources, Gradle build files, or shipped docs, in the Java repositories on its verified list. That list includes `qupath-extension-qpsc` and `qupath-extension-tiles-to-pyramid`. A test failure blocks the push. The hook does not run pytest. It is installed separately on lab machines and is not part of any repository cloned above, so a fresh clone does not have it.
+- GitHub Actions runs `./gradlew build` for the Java extensions and `pytest` for the Python packages.
 
 ### Manual Testing Checklist
 
-1. **Socket Communication:**
-   - Start server: `python -m microscope_server.server.qp_server`
-   - Send test commands via telnet or custom client
-   - Verify responses
+1. **Socket communication:**
+   - Start the server: `python -m microscope_command_server.server.qp_server`
+   - Connect from QuPath and check that the stage position is reported
 
-2. **Coordinate Transformation:**
+2. **Coordinate transformation:**
    - Create test annotations in QuPath
    - Verify tile grid generation
    - Check stage coordinate calculations
 
-3. **End-to-End Workflow:**
-   - Run full acquisition with mock hardware
+3. **End-to-end workflow** (needs a microscope or the mock configuration):
+   - Run a full acquisition
    - Verify tile stitching
    - Check QuPath project import
 
-4. **Error Handling:**
+4. **Error handling:**
    - Test with invalid parameters
    - Test connection failures
    - Test cancellation mid-acquisition
@@ -749,11 +444,11 @@ def test_acquisition_workflow():
 
 ## Additional Resources
 
-- [Architecture Documentation](architecture.md) - Detailed system architecture
-- [Configuration Guide](configuration.md) - YAML configuration reference
-- [QPSC Main Repository](https://github.com/uw-loci/QPSC) - Project overview
-- [QuPath Documentation](https://qupath.readthedocs.io/) - QuPath API reference
+- [Architecture](architecture.md): how the components fit together
+- [Configuration Guide](configuration.md): YAML configuration reference
+- [QPSC repository](https://github.com/uw-loci/QPSC): project overview
+- [QuPath Documentation](https://qupath.readthedocs.io/)
 
 ---
 
-**Questions?** Open an issue at https://github.com/uw-loci/QPSC/issues
+For questions, open an issue at https://github.com/uw-loci/QPSC/issues.

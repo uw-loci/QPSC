@@ -83,7 +83,7 @@ def create_complete_architecture():
     # PYTHON MICROSCOPE CONTROL (Modular Packages)
     # ===========================================
     with dot.subgraph(name='cluster_python') as py:
-        py.attr(label='Python Microscope Control (pip packages)', style='filled',
+        py.attr(label='Python Microscope Control', style='filled',
                 fillcolor='#E8F0F8', color=COLORS['python_dark'],
                 fontsize='12', fontname='Helvetica Bold')
 
@@ -95,7 +95,7 @@ def create_complete_architecture():
                      fillcolor=COLORS['python_dark'], fontcolor='white')
             srv.node('srv_workflow', 'Acquisition Workflows\n(Orchestration)',
                      fillcolor=COLORS['python_dark'], fontcolor='white')
-            srv.node('srv_pipeline', 'Processing Pipeline',
+            srv.node('srv_pipeline', 'Tile Processing\n(Background Correction,\nWhite Balance)',
                      fillcolor=COLORS['python_dark'], fontcolor='white')
 
         # microscope_control
@@ -104,24 +104,38 @@ def create_complete_architecture():
                       fillcolor='#D4E4F4', color='#306998')
             ctrl.node('ctrl_hw', 'Hardware Abstraction\n(Stage, Camera)',
                       fillcolor=COLORS['python_light'], fontcolor='white')
-            ctrl.node('ctrl_af', 'Autofocus System\n(Algorithms, Metrics)',
-                      fillcolor=COLORS['python_light'], fontcolor='white')
-            ctrl.node('ctrl_tissue', 'Tissue Detection\n(Empty Region Skip)',
+            ctrl.node('ctrl_af', 'Autofocus Sweeps',
                       fillcolor=COLORS['python_light'], fontcolor='white')
             ctrl.node('ctrl_config', 'Config Manager\n(YAML Loading)',
                       fillcolor=COLORS['python_light'], fontcolor='white')
 
-        # ppm_library
+        # microscope_imageprocessing
+        with py.subgraph(name='cluster_img') as img:
+            img.attr(label='microscope-imageprocessing', style='filled',
+                     fillcolor='#D4E4F4', color='#306998')
+            img.node('img_debayer', 'Debayering',
+                     fillcolor=COLORS['python_light'], fontcolor='white')
+            img.node('img_background', 'Background Correction',
+                     fillcolor=COLORS['python_light'], fontcolor='white')
+            img.node('img_writer', 'TIFF Tile Writer',
+                     fillcolor=COLORS['python_light'], fontcolor='white')
+            img.node('img_focus', 'Focus Metrics\n& Tissue Checks',
+                     fillcolor=COLORS['python_light'], fontcolor='white')
+
+        # ppm_library (optional; PPM microscopes only)
         with py.subgraph(name='cluster_ppm') as ppm:
-            ppm.attr(label='ppm-library', style='filled',
+            ppm.attr(label='ppm-library (optional, PPM only)', style='filled',
                      fillcolor='#D4E4F4', color='#306998')
             ppm.node('ppm_cal', 'PPM Calibration\n(Polarizer, Hue-to-Angle)',
                      fillcolor=COLORS['python_light'], fontcolor='white')
-            ppm.node('ppm_debayer', 'Debayering\n(CPU/GPU)',
-                     fillcolor=COLORS['python_light'], fontcolor='white')
-            ppm.node('ppm_imaging', 'Image Processing\n(Background, Correction)',
-                     fillcolor=COLORS['python_light'], fontcolor='white')
             ppm.node('ppm_analysis', 'Analysis Workflows\n(Fiber Angles)',
+                     fillcolor=COLORS['python_light'], fontcolor='white')
+
+        # polscope_library (optional; LC-PolScope microscopes only)
+        with py.subgraph(name='cluster_polscope') as pol:
+            pol.attr(label='polscope-library (optional, LC-PolScope only)', style='filled',
+                     fillcolor='#D4E4F4', color='#306998')
+            pol.node('pol_recon', 'Birefringence\nReconstruction',
                      fillcolor=COLORS['python_light'], fontcolor='white')
 
         # microscope_configurations
@@ -165,9 +179,9 @@ def create_complete_architecture():
     with dot.subgraph(name='cluster_data') as data:
         data.attr(label='Data Output', style='filled', fillcolor='#F4ECF7',
                   color=COLORS['data'], fontsize='12', fontname='Helvetica Bold')
-        data.node('data_tiles', 'Raw Tiles\n(OME-TIFF)',
+        data.node('data_tiles', 'Tiles\n(TIFF, on shared disk)',
                   fillcolor=COLORS['data'], fontcolor='white')
-        data.node('data_pyramid', 'Pyramidal Images\n(OME-ZARR / OME-TIFF)',
+        data.node('data_pyramid', 'Pyramidal Images\n(OME-TIFF / OME-ZARR)',
                   fillcolor=COLORS['data'], fontcolor='white')
 
     # ===========================================
@@ -199,11 +213,14 @@ def create_complete_architecture():
     dot.edge('srv_workflow', 'srv_pipeline')
     dot.edge('srv_workflow', 'ctrl_hw')
     dot.edge('srv_workflow', 'ctrl_af')
-    dot.edge('srv_pipeline', 'ppm_debayer')
-    dot.edge('srv_pipeline', 'ppm_imaging')
+    dot.edge('srv_pipeline', 'img_background')
+    dot.edge('srv_pipeline', 'img_writer')
+    dot.edge('ctrl_hw', 'img_debayer')
+    dot.edge('ctrl_af', 'img_focus')
+    dot.edge('srv_workflow', 'ppm_cal', style='dashed', label='PPM only')
+    dot.edge('srv_workflow', 'pol_recon', style='dashed', label='LC-PolScope only')
 
     # Control package internal
-    dot.edge('ctrl_af', 'ctrl_tissue')
     dot.edge('ctrl_config', 'cfg_templates', style='dashed')
     dot.edge('cfg_templates', 'cfg_resources', style='dashed', label='references')
 
@@ -223,7 +240,7 @@ def create_complete_architecture():
     # ===========================================
     # EDGES - Data Flow
     # ===========================================
-    dot.edge('hw_camera', 'data_tiles', label='Capture', style='dashed')
+    dot.edge('img_writer', 'data_tiles', label='Write', style='dashed')
     dot.edge('data_tiles', 't2p', label='Stitch')
     dot.edge('t2p', 'data_pyramid')
     dot.edge('data_pyramid', 'qp_project', label='Import')
@@ -253,7 +270,7 @@ def create_simplified_slide():
     dot.node('qupath', 'QuPath\n+ QPSC Extension\n(Annotation & Control)',
              fillcolor='#4A90D9', fontcolor='white')
 
-    dot.node('python', 'Python Server\n(Acquisition &\nProcessing)',
+    dot.node('python', 'Microscope Server\n(Acquisition &\nProcessing)',
              fillcolor='#306998', fontcolor='white')
 
     dot.node('micromanager', 'Micro-Manager\n(Hardware Control)',
@@ -262,7 +279,7 @@ def create_simplified_slide():
     dot.node('microscope', 'Automated\nMicroscope',
              fillcolor='#C0392B', fontcolor='white', shape='box3d')
 
-    dot.node('output', 'High-Resolution\nImages',
+    dot.node('output', 'Image Tiles\non Disk',
              fillcolor='#9B59B6', fontcolor='white', shape='folder')
 
     # Main forward flow
@@ -274,9 +291,9 @@ def create_simplified_slide():
     # Return flow
     dot.edge('microscope', 'python', label='5. Images', style='dashed',
              color='#7F8C8D', constraint='false')
-    dot.edge('python', 'output', label='6. Process & Stitch', style='dashed',
+    dot.edge('python', 'output', label='6. Process & Write Tiles', style='dashed',
              color='#7F8C8D')
-    dot.edge('output', 'qupath', label='7. Import Results', style='dashed',
+    dot.edge('output', 'qupath', label='7. Stitch & Import', style='dashed',
              color='#7F8C8D', constraint='false')
 
     # Iterative loop
